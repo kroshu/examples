@@ -22,8 +22,8 @@
 #include <vector>
 
 #include "geometry_msgs/msg/vector3.hpp"
-#include "moveit/move_group_interface/move_group_interface.hpp"
-#include "moveit/planning_scene_interface/planning_scene_interface.hpp"
+#include "moveit/move_group_interface/move_group_interface.h"
+#include "moveit/planning_scene_interface/planning_scene_interface.h"
 #include "moveit_msgs/msg/collision_object.hpp"
 #include "moveit_visual_tools/moveit_visual_tools.h"
 #include "rclcpp/rclcpp.hpp"
@@ -74,7 +74,8 @@ public:
     }
 
     RCLCPP_INFO(LOGGER, "Start planning");
-    double fraction = move_group_interface_->computeCartesianPath(waypoints, 0.005, trajectory);
+    double fraction =
+      move_group_interface_->computeCartesianPath(waypoints, 0.005, 0.0, trajectory);
     RCLCPP_INFO(LOGGER, "Planning done!");
 
     if (fraction < 1)
@@ -108,7 +109,7 @@ public:
     else
     {
       RCLCPP_INFO(LOGGER, "Planning successful");
-      return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory);
+      return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory_);
     }
   }
 
@@ -126,7 +127,7 @@ public:
     else
     {
       RCLCPP_INFO(LOGGER, "Planning successful");
-      return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory);
+      return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory_);
     }
   }
 
@@ -152,7 +153,7 @@ public:
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     RCLCPP_INFO(LOGGER, "Planning successful after %li ms", duration.count());
-    return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory);
+    return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory_);
   }
 
   void AddObject(const moveit_msgs::msg::CollisionObject & object)
