@@ -6,6 +6,9 @@ run-name: ROS-Industrial CI - ${{ github.event_name }}
 
 # or more fine-grained
 on:
+  push:
+    branches:
+      - humble
   # When there is a pull request against master
   pull_request:
     branches:
