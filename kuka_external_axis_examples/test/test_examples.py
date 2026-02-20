@@ -60,6 +60,7 @@ def generate_test_description(test_file):
 class TestModels(unittest.TestCase):
     def test_read_stdout(self, proc_output):
         # Check for frames defined by ROS-Industrial
+        proc_output.assertWaitFor("got segment base", timeout=5.0)
         proc_output.assertWaitFor(
             "Successful initialization of hardware 'kr10_r1100_2_with_kl100_2'", timeout=5.0
         )
