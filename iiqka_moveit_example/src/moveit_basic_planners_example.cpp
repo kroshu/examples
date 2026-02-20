@@ -18,8 +18,7 @@
 
 #include "iiqka_moveit_example/moveit_example.hpp"
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char *argv[]) {
   // Setup
   // Initialize ROS and create the Node
   rclcpp::init(argc, argv);
@@ -35,13 +34,12 @@ int main(int argc, char * argv[])
   example_node->addRobotPlatform();
 
   // Pilz PTP planner
-  auto standing_pose =
-    Eigen::Isometry3d(Eigen::Translation3d(0.1, 0, 0.8) * Eigen::Quaterniond::Identity());
+  auto standing_pose = Eigen::Isometry3d(Eigen::Translation3d(0.1, 0, 0.8) *
+                                         Eigen::Quaterniond::Identity());
 
-  auto planned_trajectory =
-    example_node->planToPoint(standing_pose, "pilz_industrial_motion_planner", "PTP");
-  if (planned_trajectory != nullptr)
-  {
+  auto planned_trajectory = example_node->planToPoint(
+      standing_pose, "pilz_industrial_motion_planner", "PTP");
+  if (planned_trajectory != nullptr) {
     example_node->drawTrajectory(*planned_trajectory);
     example_node->addBreakPoint();
     example_node->moveGroupInterface()->execute(*planned_trajectory);
@@ -49,12 +47,11 @@ int main(int argc, char * argv[])
   example_node->addBreakPoint();
 
   // Pilz LIN planner
-  auto cart_goal =
-    Eigen::Isometry3d(Eigen::Translation3d(0.4, -0.15, 0.55) * Eigen::Quaterniond::Identity());
-  planned_trajectory =
-    example_node->planToPoint(cart_goal, "pilz_industrial_motion_planner", "LIN");
-  if (planned_trajectory != nullptr)
-  {
+  auto cart_goal = Eigen::Isometry3d(Eigen::Translation3d(0.4, -0.15, 0.55) *
+                                     Eigen::Quaterniond::Identity());
+  planned_trajectory = example_node->planToPoint(
+      cart_goal, "pilz_industrial_motion_planner", "LIN");
+  if (planned_trajectory != nullptr) {
     example_node->drawTrajectory(*planned_trajectory);
     example_node->addBreakPoint();
     example_node->moveGroupInterface()->execute(*planned_trajectory);
@@ -62,32 +59,27 @@ int main(int argc, char * argv[])
 
   // Add collision object
   example_node->addCollisionBox(
-    geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.25).y(-0.075).z(0.675),
-    geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.1).y(0.4).z(0.1));
+      geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.25).y(-0.075).z(
+          0.675),
+      geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.1).y(0.4).z(0.1));
   example_node->addBreakPoint();
 
   // Try moving back with Pilz LIN
-  planned_trajectory =
-    example_node->planToPoint(standing_pose, "pilz_industrial_motion_planner", "LIN");
-  if (planned_trajectory != nullptr)
-  {
+  planned_trajectory = example_node->planToPoint(
+      standing_pose, "pilz_industrial_motion_planner", "LIN");
+  if (planned_trajectory != nullptr) {
     example_node->drawTrajectory(*planned_trajectory);
-  }
-  else
-  {
+  } else {
     example_node->drawTitle("Failed planning with Pilz LIN");
   }
   example_node->addBreakPoint();
 
   // Try moving back with Pilz PTP
-  planned_trajectory =
-    example_node->planToPoint(standing_pose, "pilz_industrial_motion_planner", "PTP");
-  if (planned_trajectory != nullptr)
-  {
+  planned_trajectory = example_node->planToPoint(
+      standing_pose, "pilz_industrial_motion_planner", "PTP");
+  if (planned_trajectory != nullptr) {
     example_node->drawTrajectory(*planned_trajectory);
-  }
-  else
-  {
+  } else {
     example_node->drawTitle("Failed planning with Pilz PTP");
   }
   example_node->addBreakPoint();

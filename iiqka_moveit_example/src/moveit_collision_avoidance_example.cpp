@@ -17,8 +17,7 @@
 
 #include "iiqka_moveit_example/moveit_example.hpp"
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char *argv[]) {
   // Setup
   // Initialize ROS and create the Node
   rclcpp::init(argc, argv);
@@ -34,26 +33,25 @@ int main(int argc, char * argv[])
 
   // Go to correct position for the example
   auto init_trajectory = example_node->planToPosition(
-    std::vector<double>{0.3587, 0.3055, -1.3867, 0.0, -0.4896, -0.3587});
-  if (init_trajectory != nullptr)
-  {
+      std::vector<double>{0.3587, 0.3055, -1.3867, 0.0, -0.4896, -0.3587});
+  if (init_trajectory != nullptr) {
     example_node->moveGroupInterface()->execute(*init_trajectory);
   }
 
   // Add collision object
   example_node->addCollisionBox(
-    geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.125).y(0.15).z(0.5),
-    geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.1).y(1.0).z(0.1));
+      geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.125).y(0.15).z(
+          0.5),
+      geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.1).y(1.0).z(0.1));
   example_node->addBreakPoint();
 
-  auto standing_pose =
-    Eigen::Isometry3d(Eigen::Translation3d(0.1, 0, 0.8) * Eigen::Quaterniond::Identity());
+  auto standing_pose = Eigen::Isometry3d(Eigen::Translation3d(0.1, 0, 0.8) *
+                                         Eigen::Quaterniond::Identity());
 
   // Plan with collision avoidance
-  auto planned_trajectory =
-    example_node->planToPoint(standing_pose, "ompl", "RRTConnectkConfigDefault");
-  if (planned_trajectory != nullptr)
-  {
+  auto planned_trajectory = example_node->planToPoint(
+      standing_pose, "ompl", "RRTConnectkConfigDefault");
+  if (planned_trajectory != nullptr) {
     example_node->drawTrajectory(*planned_trajectory);
     example_node->addBreakPoint();
     example_node->moveGroupInterface()->execute(*planned_trajectory);
