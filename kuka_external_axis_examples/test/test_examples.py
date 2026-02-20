@@ -12,19 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import unittest
 
 import launch
 import launch_testing.actions
 import launch_testing.markers
 import pytest
-import os
-
+from ament_index_python.packages import get_package_share_directory
+from launch.actions.include_launch_description import IncludeLaunchDescription
 from launch.launch_description_sources.python_launch_description_source import (
     PythonLaunchDescriptionSource,
 )
-from launch.actions.include_launch_description import IncludeLaunchDescription
-from ament_index_python.packages import get_package_share_directory
 
 
 def list_test_launch_files():
@@ -62,7 +61,7 @@ def generate_test_description(test_file):
 class TestModels(unittest.TestCase):
     def test_read_stdout(self, proc_output):
         # Check for frames defined by ROS-Industrial
-        proc_output.assertWaitFor("Robot initialized", timeout=5.0)
+        proc_output.assertWaitFor("got segment base", timeout=5.0)
         proc_output.assertWaitFor(
             "Successful initialization of hardware 'kr10_r1100_2_with_kl100_2'", timeout=5.0
         )
