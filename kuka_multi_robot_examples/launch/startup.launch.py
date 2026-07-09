@@ -1,4 +1,4 @@
-# Copyright 2025 KUKA Hungaria Kft.
+# Copyright 2023 KUKA Hungaria Kft.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,42 +16,60 @@
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import (
+    Command,
+    FindExecutable,
+    LaunchConfiguration,
+    PathJoinSubstitution,
+)
 from launch_ros.actions import LifecycleNode, Node
 from launch_ros.substitutions import FindPackageShare
-import os
 
 
-def launch_setup(context):
+def launch_setup(context, *args, **kwargs):
     robot_model = LaunchConfiguration("robot_model")
+    robot_family = LaunchConfiguration("robot_family")
     mode = LaunchConfiguration("mode")
     use_gpio = LaunchConfiguration("use_gpio")
     driver_version = LaunchConfiguration("driver_version")
-    client_ip = LaunchConfiguration("client_ip")
-    client_port = LaunchConfiguration("client_port")
-    controller_ip = LaunchConfiguration("controller_ip")
-    x = LaunchConfiguration("x")
-    y = LaunchConfiguration("y")
-    z = LaunchConfiguration("z")
-    roll = LaunchConfiguration("roll")
-    pitch = LaunchConfiguration("pitch")
-    yaw = LaunchConfiguration("yaw")
-    roundtrip_time = LaunchConfiguration("roundtrip_time")
-    verify_robot_model = LaunchConfiguration("verify_robot_model")
-    ns = LaunchConfiguration("namespace")
     controller_config = LaunchConfiguration("controller_config")
-    jtc_config = LaunchConfiguration("jtc_config")
-    gpio_config = LaunchConfiguration("gpio_config")
+    roundtrip_time = LaunchConfiguration("roundtrip_time")
+    ns = LaunchConfiguration("namespace")
+    non_rt_cores = LaunchConfiguration("non_rt_cores")
+    rt_core = LaunchConfiguration("rt_core")
+    rt_prio = LaunchConfiguration("rt_prio")
+    lock_memory = LaunchConfiguration("lock_memory")
     if ns.perform(context) == "":
         tf_prefix = ""
     else:
         tf_prefix = ns.perform(context) + "_"
 
+    # Parse allowed cores into a list of integers; allow formats like "2,3, 4" or "  "
+    cores = []
+    for part in non_rt_cores.perform(context).split(","):
+        part = part.strip()
+        if part == "":
+            continue
+        try:
+            cores.append(int(part))
+        except ValueError:
+            raise RuntimeError(
+                f"Invalid allowed_cores entry: '{part}'. "
+                "Provide a comma-separated list of integers, e.g. '2,3,4'."
+            )
+
+    # Compute the prefix: None if no cores; otherwise build 'taskset -c <list>'
+    prefix_cmd = None
+    if cores:
+        # Build the string "2,3,4" for taskset
+        core_list_str = ",".join(str(c) for c in cores)
+        prefix_cmd = f"taskset -c {core_list_str}"
+
     if not controller_config.perform(context):
         rel_path_to_config_file = (
             "/config/ros2_controller_config_rsi_only.yaml"
             if driver_version.perform(context) == "rsi_only"
-            else "/config/ros2_controller_config_eki_rsi.yaml"
+            else "/config/ros2_controller_config_extended.yaml"
         )
         controller_config = (
             get_package_share_directory("kuka_rsi_driver") + rel_path_to_config_file
@@ -64,56 +82,17 @@ def launch_setup(context):
             " ",
             PathJoinSubstitution(
                 [
-                    FindPackageShare("kuka_external_axis_examples"),
+                    FindPackageShare(f"kuka_multi_robot_examples"),
                     "urdf",
-                    robot_model.perform(context) + ".urdf.xacro",
+                    "multi_kr6_r700_2.urdf.xacro",
                 ]
             ),
             " ",
             "mode:=",
             mode,
             " ",
-            "use_gpio:=",
-            use_gpio,
-            " ",
             "driver_version:=",
             driver_version,
-            " ",
-            "client_port:=",
-            client_port,
-            " ",
-            "client_ip:=",
-            client_ip,
-            " ",
-            "controller_ip:=",
-            controller_ip,
-            " ",
-            "prefix:=",
-            tf_prefix,
-            " ",
-            "x:=",
-            x,
-            " ",
-            "y:=",
-            y,
-            " ",
-            "z:=",
-            z,
-            " ",
-            "roll:=",
-            roll,
-            " ",
-            "pitch:=",
-            pitch,
-            " ",
-            "yaw:=",
-            yaw,
-            " ",
-            "roundtrip_time:=",
-            roundtrip_time,
-            " ",
-            "verify_robot_model:=",
-            verify_robot_model,
         ],
         on_stderr="capture",
     )
@@ -123,8 +102,6 @@ def launch_setup(context):
     # The driver config contains only parameters that can be changed after startup
     driver_config = get_package_share_directory("kuka_rsi_driver") + "/config/driver_config.yaml"
 
-    controller_manager_node = ns.perform(context) + "/controller_manager"
-
     control_node = Node(
         namespace=ns,
         package="kuka_drivers_core",
@@ -133,11 +110,15 @@ def launch_setup(context):
             robot_description,
             controller_config,
             {
+                "cpu_affinity": int(rt_core.perform(context)),
+                "thread_priority": int(rt_prio.perform(context)),
+                "lock_memory": lock_memory.perform(context) == "true",
                 "hardware_components_initial_state": {
-                    "unconfigured": [tf_prefix + robot_model.perform(context)]
+                    "unconfigured": ["robot1_kr6_r700_2", "robot2_kr6_r700_2"],
                 },
             },
         ],
+        prefix=prefix_cmd,
     )
     robot_manager_node = LifecycleNode(
         name=["robot_manager"],
@@ -146,12 +127,16 @@ def launch_setup(context):
         executable=(
             "robot_manager_node_rsi_only"
             if driver_version.perform(context) == "rsi_only"
-            else "robot_manager_node_eki_rsi"
+            else "robot_manager_node_extended"
         ),
         parameters=[
             driver_config,
-            {"robot_models": [robot_model.perform(context)], "use_gpio": use_gpio},
+            {
+                "robot_models": ["robot1_kr6_r700_2", "robot2_kr6_r700_2"],
+                "use_gpio": use_gpio,
+            },
         ],
+        prefix=prefix_cmd,
     )
     robot_state_publisher = Node(
         namespace=ns,
@@ -159,34 +144,53 @@ def launch_setup(context):
         executable="robot_state_publisher",
         output="both",
         parameters=[robot_description],
+        prefix=prefix_cmd,
     )
 
     # Spawn controllers
-    def controller_spawner(controller_names, param_file):
-        arg_list = [controller_names, "-c", controller_manager_node, "-n", ns, "--inactive"]
+    def controller_spawner(controller_name, prefix_cmd, param_file=None, activate=False):
+        arg_list = [
+            controller_name,
+            "-c",
+            "controller_manager",
+            "-n",
+            ns,
+        ]
 
+        # Add param-file if it's provided
         if param_file:
-            if not os.path.isfile(param_file.perform(context)):
-                raise FileNotFoundError(f"Could not find {param_file.perform(context)}")
             arg_list.extend(["--param-file", param_file])
 
-        return Node(package="controller_manager", executable="spawner", arguments=arg_list)
+        if not activate:
+            arg_list.append("--inactive")
+
+        return Node(
+            package="controller_manager",
+            executable="spawner",
+            prefix=prefix_cmd,
+            arguments=arg_list,
+        )
 
     controllers = {
         "joint_state_broadcaster": None,
-        "joint_trajectory_controller": jtc_config,
-        "event_broadcaster": None,
+        "joint_trajectory_controller": get_package_share_directory("kuka_multi_robot_examples") + "/config/joint_trajectory_controller_config.yaml",
+        "event_broadcaster": get_package_share_directory("kuka_multi_robot_examples") + "/config/kuka_event_broadcaster_config.yaml",
     }
 
     if use_gpio.perform(context) == "true":
         controllers["gpio_controller"] = gpio_config
 
     if driver_version.perform(context) in {"eki_rsi", "mxa_rsi"}:
-        controllers["control_mode_handler"] = None
-        controllers["kss_message_handler"] = None
+        controllers["control_mode_handler"] = get_package_share_directory(
+            "kuka_multi_robot_examples"
+        ) + "/config/kuka_control_mode_handler_config.yaml"
+        controllers["kss_message_handler"] = get_package_share_directory(
+            "kuka_multi_robot_examples"
+        ) + "/config/kuka_kss_message_handler_config.yaml"
 
     controller_spawners = [
-        controller_spawner(name, param_file) for name, param_file in controllers.items()
+        controller_spawner(name, prefix_cmd, param_file)
+        for name, param_file in controllers.items()
     ]
 
     nodes_to_start = [
@@ -200,10 +204,10 @@ def launch_setup(context):
 
 def generate_launch_description():
     launch_arguments = []
-    launch_arguments.append(
-        DeclareLaunchArgument("robot_model", default_value="kr10_r1100_2_with_kl100_2")
-    )
+    launch_arguments.append(DeclareLaunchArgument("robot_model", default_value="kr6_r700_sixx"))
+    launch_arguments.append(DeclareLaunchArgument("robot_family", default_value="agilus"))
     launch_arguments.append(DeclareLaunchArgument("mode", default_value="hardware"))
+    launch_arguments.append(DeclareLaunchArgument("controller_config", default_value=""))
     launch_arguments.append(
         DeclareLaunchArgument("use_gpio", default_value="false", choices=["true", "false"])
     )
@@ -216,34 +220,38 @@ def generate_launch_description():
         )
     )
     launch_arguments.append(DeclareLaunchArgument("namespace", default_value=""))
-    launch_arguments.append(DeclareLaunchArgument("client_ip", default_value="0.0.0.0"))
-    launch_arguments.append(DeclareLaunchArgument("client_port", default_value="59152"))
-    launch_arguments.append(DeclareLaunchArgument("controller_ip", default_value="0.0.0.0"))
-    launch_arguments.append(DeclareLaunchArgument("x", default_value="0"))
-    launch_arguments.append(DeclareLaunchArgument("y", default_value="0"))
-    launch_arguments.append(DeclareLaunchArgument("z", default_value="0"))
-    launch_arguments.append(DeclareLaunchArgument("roll", default_value="0"))
-    launch_arguments.append(DeclareLaunchArgument("pitch", default_value="0"))
-    launch_arguments.append(DeclareLaunchArgument("yaw", default_value="0"))
     launch_arguments.append(DeclareLaunchArgument("roundtrip_time", default_value="4000"))
     launch_arguments.append(
         DeclareLaunchArgument(
-            "verify_robot_model", default_value="true", choices=["true", "false"]
-        )
-    )
-    launch_arguments.append(DeclareLaunchArgument("controller_config", default_value=""))
-    launch_arguments.append(
-        DeclareLaunchArgument(
-            "jtc_config",
-            default_value=get_package_share_directory("kuka_external_axis_examples")
-            + "/config/joint_trajectory_controller_config_6_axis_kl.yaml",
+            "rt_core",
+            default_value="-1",  # -1 means do not pin to core
+            description=("CPU core index for taskset pinning of the RT thread"),
         )
     )
     launch_arguments.append(
         DeclareLaunchArgument(
-            "gpio_config",
-            default_value=get_package_share_directory("kuka_rsi_driver")
-            + "/config/gpio_controller_config.yaml",
+            "rt_prio",
+            default_value="70",
+            description=("The priority of the thread that runs the control loop"),
+        )
+    )
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "non_rt_cores",
+            default_value="",
+            description=(
+                "Comma-separated CPU core indices for taskset pinning of non-RT threads "
+                "(e.g. '2,3,4'). Leave empty to disable pinning."
+            ),
+        )
+    )
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "lock_memory",
+            default_value="true",
+            description=(
+                "Whether to lock memory of the control loop with mlockall to avoid paging"
+            ),
         )
     )
 
