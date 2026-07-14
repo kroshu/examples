@@ -51,7 +51,7 @@ def launch_setup(context):
         rel_path_to_config_file = (
             "/config/ros2_controller_config_rsi_only.yaml"
             if driver_version.perform(context) == "rsi_only"
-            else "/config/ros2_controller_config_eki_rsi.yaml"
+            else "/config/ros2_controller_config_extended.yaml"
         )
         controller_config = (
             get_package_share_directory("kuka_rsi_driver") + rel_path_to_config_file
@@ -146,7 +146,7 @@ def launch_setup(context):
         executable=(
             "robot_manager_node_rsi_only"
             if driver_version.perform(context) == "rsi_only"
-            else "robot_manager_node_eki_rsi"
+            else "robot_manager_node_extended"
         ),
         parameters=[driver_config, {"robot_model": robot_model, "use_gpio": use_gpio}],
     )
@@ -159,15 +159,27 @@ def launch_setup(context):
     )
 
     # Spawn controllers
-    def controller_spawner(controller_names, param_file):
-        arg_list = [controller_names, "-c", controller_manager_node, "-n", ns, "--inactive"]
+    def controller_spawner(controller_name, param_file=None, activate=False):
+        arg_list = [
+            controller_name,
+            "-c",
+            controller_manager_node,
+            "-n",
+            ns,
+        ]
 
+        # Add param-file if it's provided
         if param_file:
-            if not os.path.isfile(param_file.perform(context)):
-                raise FileNotFoundError(f"Could not find {param_file.perform(context)}")
             arg_list.extend(["--param-file", param_file])
 
-        return Node(package="controller_manager", executable="spawner", arguments=arg_list)
+        if not activate:
+            arg_list.append("--inactive")
+
+        return Node(
+            package="controller_manager",
+            executable="spawner",
+            arguments=arg_list,
+        )
 
     controllers = {
         "joint_state_broadcaster": None,
@@ -183,7 +195,8 @@ def launch_setup(context):
         controllers["kss_message_handler"] = None
 
     controller_spawners = [
-        controller_spawner(name, param_file) for name, param_file in controllers.items()
+        controller_spawner(name, param_file)
+        for name, param_file in controllers.items()
     ]
 
     nodes_to_start = [
