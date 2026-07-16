@@ -73,9 +73,55 @@ def launch_setup(context, *args, **kwargs):
     ompl_pipeline_config["planning_plugin"] = (
         planning_plugins[0] if planning_plugins else "ompl_interface/OMPLPlanner"
     )
+    base_group_cfg = ompl_pipeline_config.get("manipulator", {})
+    if base_group_cfg:
+        robot1_group_cfg = dict(base_group_cfg)
+        robot1_group_cfg["projection_evaluator"] = "joints(robot1_joint_1,robot1_joint_2)"
+
+        robot2_group_cfg = dict(base_group_cfg)
+        robot2_group_cfg["projection_evaluator"] = "joints(robot2_joint_1,robot2_joint_2)"
+
+        ompl_pipeline_config["robot1_manipulator"] = robot1_group_cfg
+        ompl_pipeline_config["robot2_manipulator"] = robot2_group_cfg
 
     with open(moveit_config_path + "/pilz_cartesian_limits.yaml", "r") as f:
         pilz_cartesian_limits_config = yaml.safe_load(f)
+
+    with open(
+        get_package_share_directory("kuka_agilus_support")
+        + "/config/kr6_r700_2_joint_limits.yaml",
+        "r",
+    ) as f:
+        base_joint_limits_config = yaml.safe_load(f)
+
+    base_joint_limits = base_joint_limits_config.get("joint_limits", {})
+    prefixed_joint_limits = {}
+    prefixed_joint_names = []
+    for joint_name, limits in base_joint_limits.items():
+        prefixed_joint_limits[f"robot1_{joint_name}"] = dict(limits)
+        prefixed_joint_limits[f"robot2_{joint_name}"] = dict(limits)
+        prefixed_joint_names.append(f"robot1_{joint_name}")
+        prefixed_joint_names.append(f"robot2_{joint_name}")
+
+    controller_names = moveit_controllers_config.get(
+        "moveit_simple_controller_manager", {}
+    ).get("controller_names", [])
+    for controller_name in controller_names:
+        controller_cfg = moveit_controllers_config.get(
+            "moveit_simple_controller_manager", {}
+        ).get(controller_name)
+        if isinstance(controller_cfg, dict) and "joints" in controller_cfg:
+            controller_cfg["joints"] = prefixed_joint_names
+
+    robot_description_planning = {
+        "default_velocity_scaling_factor": base_joint_limits_config.get(
+            "default_velocity_scaling_factor", 1.0
+        ),
+        "default_acceleration_scaling_factor": base_joint_limits_config.get(
+            "default_acceleration_scaling_factor", 1.0
+        ),
+        "joint_limits": prefixed_joint_limits,
+    }
 
     move_group_server = Node(
         package="moveit_ros_move_group",
@@ -87,6 +133,7 @@ def launch_setup(context, *args, **kwargs):
             {"publish_robot_description_semantic": True},
             {"planning_pipelines": ["ompl"]},
             {"default_planning_pipeline": "ompl"},
+            {"robot_description_planning": robot_description_planning},
             kinematics_config,
             moveit_controllers_config,
             {"ompl": ompl_pipeline_config},
