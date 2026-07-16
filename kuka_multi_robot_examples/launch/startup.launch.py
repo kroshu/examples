@@ -76,6 +76,19 @@ def launch_setup(context, *args, **kwargs):
         )
 
     # Get URDF via xacro
+    prefix = LaunchConfiguration("prefix")
+    prefix2 = LaunchConfiguration("prefix2")
+    client_ip = LaunchConfiguration("client_ip")
+    client_port = LaunchConfiguration("client_port")
+    mxa_client_port = LaunchConfiguration("mxa_client_port")
+    controller_ip = LaunchConfiguration("controller_ip")
+    use_gpio = LaunchConfiguration("use_gpio")
+    use_gpio2 = LaunchConfiguration("use_gpio2")
+    client_ip2 = LaunchConfiguration("client_ip2")
+    client_port2 = LaunchConfiguration("client_port2")
+    mxa_client_port2 = LaunchConfiguration("mxa_client_port2")
+    controller_ip2 = LaunchConfiguration("controller_ip2")
+    
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -93,6 +106,42 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "driver_version:=",
             driver_version,
+            " ",
+            "prefix:=",
+            prefix,
+            " ",
+            "client_ip:=",
+            client_ip,
+            " ",
+            "client_port:=",
+            client_port,
+            " ",
+            "mxa_client_port:=",
+            mxa_client_port,
+            " ",
+            "controller_ip:=",
+            controller_ip,
+            " ",
+            "use_gpio:=",
+            use_gpio,
+            " ",
+            "prefix2:=",
+            prefix2,
+            " ",
+            "client_ip2:=",
+            client_ip2,
+            " ",
+            "client_port2:=",
+            client_port2,
+            " ",
+            "mxa_client_port2:=",
+            mxa_client_port2,
+            " ",
+            "controller_ip2:=",
+            controller_ip2,
+            " ",
+            "use_gpio2:=",
+            use_gpio2,
         ],
         on_stderr="capture",
     )
@@ -209,9 +258,6 @@ def generate_launch_description():
     launch_arguments.append(DeclareLaunchArgument("mode", default_value="hardware"))
     launch_arguments.append(DeclareLaunchArgument("controller_config", default_value=""))
     launch_arguments.append(
-        DeclareLaunchArgument("use_gpio", default_value="false", choices=["true", "false"])
-    )
-    launch_arguments.append(
         DeclareLaunchArgument(
             "driver_version",
             default_value="rsi_only",
@@ -219,6 +265,27 @@ def generate_launch_description():
             choices=["rsi_only", "eki_rsi", "mxa_rsi"],
         )
     )
+    
+    # Robot 1 arguments
+    launch_arguments.append(DeclareLaunchArgument("prefix", default_value="robot1_"))
+    launch_arguments.append(DeclareLaunchArgument("client_ip", default_value="0.0.0.0"))
+    launch_arguments.append(DeclareLaunchArgument("client_port", default_value="59152"))
+    launch_arguments.append(DeclareLaunchArgument("mxa_client_port", default_value="1337"))
+    launch_arguments.append(DeclareLaunchArgument("controller_ip", default_value="0.0.0.0"))
+    launch_arguments.append(
+        DeclareLaunchArgument("use_gpio", default_value="false", choices=["true", "false"])
+    )
+    
+    # Robot 2 arguments
+    launch_arguments.append(DeclareLaunchArgument("prefix2", default_value="robot2_"))
+    launch_arguments.append(DeclareLaunchArgument("client_ip2", default_value="0.0.0.0"))
+    launch_arguments.append(DeclareLaunchArgument("client_port2", default_value="59152"))
+    launch_arguments.append(DeclareLaunchArgument("mxa_client_port2", default_value="1337"))
+    launch_arguments.append(DeclareLaunchArgument("controller_ip2", default_value="0.0.0.0"))
+    launch_arguments.append(
+        DeclareLaunchArgument("use_gpio2", default_value="false", choices=["true", "false"])
+    )
+    
     launch_arguments.append(DeclareLaunchArgument("namespace", default_value=""))
     launch_arguments.append(DeclareLaunchArgument("roundtrip_time", default_value="4000"))
     launch_arguments.append(
