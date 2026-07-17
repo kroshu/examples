@@ -27,16 +27,15 @@ import yaml
 
 
 def launch_setup(context, *args, **kwargs):
-    rviz_config = (
+    rviz_config_file = (
         get_package_share_directory("kuka_resources") + "/config/planning_6_axis.rviz"
     )
 
     # Include the multi-robot startup launch
     startup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [get_package_share_directory("kuka_multi_robot_examples"), "/launch/startup_with_rviz.launch.py"]
+            [get_package_share_directory("kuka_multi_robot_examples"), "/launch/startup.launch.py"]
         ),
-        launch_arguments={"rviz_config": rviz_config}.items(),
     )
 
     # Manual MoveIt configuration for multi-robot KR setup
@@ -81,8 +80,12 @@ def launch_setup(context, *args, **kwargs):
         robot2_group_cfg = dict(base_group_cfg)
         robot2_group_cfg["projection_evaluator"] = "joints(robot2_joint_1,robot2_joint_2)"
 
+        dual_group_cfg = dict(base_group_cfg)
+        dual_group_cfg["projection_evaluator"] = "joints(robot1_joint_1,robot2_joint_1)"
+
         ompl_pipeline_config["robot1_manipulator"] = robot1_group_cfg
         ompl_pipeline_config["robot2_manipulator"] = robot2_group_cfg
+        ompl_pipeline_config["dual_manipulator"] = dual_group_cfg
 
     with open(moveit_config_path + "/pilz_cartesian_limits.yaml", "r") as f:
         pilz_cartesian_limits_config = yaml.safe_load(f)
@@ -141,7 +144,24 @@ def launch_setup(context, *args, **kwargs):
         ],
     )
 
-    return [startup_launch, move_group_server]
+    robot_description_kinematics = {
+        "robot_description_kinematics": {
+            "robot1_manipulator": {"kinematics_solver": "kdl_kinematics_plugin/KDLKinematicsPlugin"},
+            "robot2_manipulator": {"kinematics_solver": "kdl_kinematics_plugin/KDLKinematicsPlugin"}
+        }
+    }
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="log",
+        arguments=["-d", rviz_config_file, "--ros-args", "--log-level", "error"],
+        parameters=[
+            robot_description_kinematics,
+        ],
+    )
+
+    return [startup_launch, move_group_server, rviz]
 
 
 def generate_launch_description():

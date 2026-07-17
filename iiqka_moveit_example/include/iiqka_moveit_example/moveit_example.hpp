@@ -31,12 +31,15 @@
 class MoveitExample : public rclcpp::Node
 {
 public:
-  MoveitExample() : rclcpp::Node("moveit_example") {}
+  explicit MoveitExample(
+    const std::string & node_name = "moveit_example",
+    const std::string & planning_group = "manipulator")
+  : rclcpp::Node(node_name), planning_group_(planning_group) {}
 
   void initialize()
   {
     move_group_interface_ = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-      shared_from_this(), PLANNING_GROUP);
+      shared_from_this(), planning_group_);
 
     moveit_visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(
       shared_from_this(), "world", rviz_visual_tools::RVIZ_MARKER_TOPIC,
@@ -312,7 +315,7 @@ public:
   {
     moveit_visual_tools_->deleteAllMarkers();
     moveit_visual_tools_->publishTrajectoryLine(
-      trajectory, moveit_visual_tools_->getRobotModel()->getJointModelGroup(PLANNING_GROUP));
+      trajectory, moveit_visual_tools_->getRobotModel()->getJointModelGroup(planning_group_));
   }
 
   void drawTitle(const std::string & text)
@@ -338,12 +341,14 @@ public:
     return move_group_interface_;
   }
 
+  const std::string & planningGroup() const { return planning_group_; }
+
 protected:
   std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_interface_;
   rclcpp::Publisher<moveit_msgs::msg::PlanningScene>::SharedPtr planning_scene_diff_publisher_;
   std::shared_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
   const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_basic_plan");
-  const std::string PLANNING_GROUP = "manipulator";
+  const std::string planning_group_;
 };
 
 #endif  // IIQKA_MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
