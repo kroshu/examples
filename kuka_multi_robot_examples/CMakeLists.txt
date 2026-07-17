@@ -8,13 +8,11 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(trajectory_msgs REQUIRED)
 
 add_executable(moveit_dual_robot_planning_example src/moveit_dual_robot_planning_example.cpp)
 ament_target_dependencies(moveit_dual_robot_planning_example
   moveit_ros_planning_interface
   rclcpp
-  trajectory_msgs
 )
 
 install(TARGETS

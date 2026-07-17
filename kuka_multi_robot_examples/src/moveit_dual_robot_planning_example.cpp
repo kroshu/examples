@@ -17,12 +17,10 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <cstdint>
 
 #include "moveit/move_group_interface/move_group_interface.hpp"
 #include "rclcpp/executors/multi_threaded_executor.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "trajectory_msgs/msg/joint_trajectory_point.hpp"
 
 namespace
 {
@@ -95,58 +93,6 @@ bool plan_for_group(
   return planned;
 }
 
-bool enforce_synchronized_joint_timing(
-  const rclcpp::Node::SharedPtr & node,
-  moveit::planning_interface::MoveGroupInterface::Plan & plan,
-  const double duration_seconds = 5.0,
-  const std::size_t interpolation_steps = 100)
-{
-  auto & jt = plan.trajectory.joint_trajectory;
-  if (jt.points.empty()) {
-    RCLCPP_ERROR(node->get_logger(), "planned trajectory is empty");
-    return false;
-  }
-  if (jt.points.size() < 2) {
-    RCLCPP_WARN(node->get_logger(), "planned trajectory has a single point, skipping synchronization");
-    return true;
-  }
-
-  const std::vector<double> start_positions = jt.points.front().positions;
-  const std::vector<double> goal_positions = jt.points.back().positions;
-  if (start_positions.size() != goal_positions.size()) {
-    RCLCPP_ERROR(node->get_logger(), "start/goal trajectory point size mismatch");
-    return false;
-  }
-
-  jt.points.clear();
-  jt.points.reserve(interpolation_steps + 1);
-
-  for (std::size_t i = 0; i <= interpolation_steps; ++i) {
-    const double alpha = static_cast<double>(i) / static_cast<double>(interpolation_steps);
-
-    trajectory_msgs::msg::JointTrajectoryPoint p;
-    p.positions.resize(start_positions.size());
-    p.velocities.resize(start_positions.size(), 0.0);
-    p.accelerations.resize(start_positions.size(), 0.0);
-
-    for (std::size_t j = 0; j < start_positions.size(); ++j) {
-      p.positions[j] = start_positions[j] + alpha * (goal_positions[j] - start_positions[j]);
-    }
-
-    const double t = alpha * duration_seconds;
-    p.time_from_start.sec = static_cast<int32_t>(t);
-    p.time_from_start.nanosec =
-      static_cast<uint32_t>((t - static_cast<double>(p.time_from_start.sec)) * 1e9);
-    jt.points.push_back(std::move(p));
-  }
-
-  RCLCPP_INFO(
-    node->get_logger(),
-    "re-timed dual-arm plan for synchronized execution (duration=%.2fs, points=%zu)",
-    duration_seconds, jt.points.size());
-  return true;
-}
-
 bool execute_for_group(
   const rclcpp::Node::SharedPtr & node,
   moveit::planning_interface::MoveGroupInterface & move_group_interface,
@@ -186,17 +132,12 @@ int main(int argc, char * argv[])
   moveit::planning_interface::MoveGroupInterface::Plan dual_plan;
 
   const bool dual_plan_ok = plan_for_group(node, dual_move_group_interface, dual_group, dual_plan);
-  bool dual_sync_ok = false;
-  if (dual_plan_ok) {
-    dual_sync_ok = enforce_synchronized_joint_timing(node, dual_plan);
-  }
-
   bool dual_exec_ok = false;
-  if (dual_plan_ok && dual_sync_ok) {
+  if (dual_plan_ok) {
     dual_exec_ok = execute_for_group(node, dual_move_group_interface, dual_group, dual_plan);
   }
 
-  if (dual_plan_ok && dual_sync_ok && dual_exec_ok) {
+  if (dual_plan_ok && dual_exec_ok) {
     RCLCPP_INFO(
       node->get_logger(),
       "Successfully planned and executed one combined trajectory for both robots.");
@@ -208,5 +149,5 @@ int main(int argc, char * argv[])
   executor.cancel();
   executor_thread.join();
   rclcpp::shutdown();
-  return (dual_plan_ok && dual_sync_ok && dual_exec_ok) ? 0 : 1;
+  return (dual_plan_ok && dual_exec_ok) ? 0 : 1;
 }
