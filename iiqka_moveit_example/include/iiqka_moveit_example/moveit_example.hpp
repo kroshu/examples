@@ -141,34 +141,6 @@ public:
     }
   }
 
-
-  moveit_msgs::msg::RobotTrajectory::SharedPtr planToPoseTargets(
-    const std::map<std::string, geometry_msgs::msg::Pose> & pose_targets,
-    const std::string & planning_pipeline = "pilz_industrial_motion_planner",
-    const std::string & planner_id = "LIN")
-  {
-    move_group_interface_->setPlanningPipelineId(planning_pipeline);
-    move_group_interface_->setPlannerId(planner_id);
-    move_group_interface_->setStartStateToCurrentState();
-    move_group_interface_->clearPoseTargets();
-
-    for (const auto & target : pose_targets)
-    {
-      move_group_interface_->setPoseTarget(target.second, target.first);
-    }
-
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
-    RCLCPP_INFO(LOGGER, "Sending planning request");
-    if (!move_group_interface_->plan(plan))
-    {
-      RCLCPP_INFO(LOGGER, "Planning failed");
-      return nullptr;
-    }
-
-    RCLCPP_INFO(LOGGER, "Planning successful");
-    return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory);
-  }
-
   bool executeTrajectory(const moveit_msgs::msg::RobotTrajectory & trajectory)
   {
     return static_cast<bool>(move_group_interface_->execute(trajectory));
