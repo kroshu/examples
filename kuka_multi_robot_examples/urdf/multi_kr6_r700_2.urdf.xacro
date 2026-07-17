@@ -26,11 +26,11 @@
   <xacro:arg name="use_gpio2" default="false"/>
 
   <!-- Robot 1 ros2_control + geometry -->
-  <xacro:kuka_agilus_ros2_control name="$(arg prefix)kr6_r700_2" driver_version="$(arg driver_version)" client_ip="$(arg client_ip)" client_port="$(arg client_port)" mxa_client_port="$(arg mxa_client_port)" controller_ip="$(arg controller_ip)" prefix="$(arg prefix)" mode="$(arg mode)" use_gpio="$(arg use_gpio)" roundtrip_time="$(arg roundtrip_time)" verify_robot_model="$(arg verify_robot_model)" is_async="false">
+  <xacro:kuka_agilus_ros2_control name="$(arg prefix)kr6_r700_2" driver_version="$(arg driver_version)" client_ip="$(arg client_ip)" client_port="$(arg client_port)" mxa_client_port="$(arg mxa_client_port)" controller_ip="$(arg controller_ip)" prefix="$(arg prefix)" mode="$(arg mode)" use_gpio="$(arg use_gpio)" roundtrip_time="$(arg roundtrip_time)" verify_robot_model="$(arg verify_robot_model)" is_async="true">
     <ext_axes_ros2_control_joints/>
   </xacro:kuka_agilus_ros2_control>
   <!-- Robot 2 ros2_control + geometry -->
-  <xacro:kuka_agilus_ros2_control name="$(arg prefix2)kr6_r700_2" driver_version="$(arg driver_version)" client_ip="$(arg client_ip2)" client_port="$(arg client_port2)" mxa_client_port="$(arg mxa_client_port2)" controller_ip="$(arg controller_ip2)" prefix="$(arg prefix2)" mode="$(arg mode)" use_gpio="$(arg use_gpio2)" roundtrip_time="$(arg roundtrip_time)" verify_robot_model="$(arg verify_robot_model)" is_async="true">
+  <xacro:kuka_agilus_ros2_control name="$(arg prefix2)kr6_r700_2" driver_version="$(arg driver_version)" client_ip="$(arg client_ip2)" client_port="$(arg client_port2)" mxa_client_port="$(arg mxa_client_port2)" controller_ip="$(arg controller_ip2)" prefix="$(arg prefix2)" mode="$(arg mode)" use_gpio="$(arg use_gpio2)" roundtrip_time="$(arg roundtrip_time)" verify_robot_model="$(arg verify_robot_model)" is_async="false">
     <ext_axes_ros2_control_joints/>
   </xacro:kuka_agilus_ros2_control>
   <!-- world link -->
