@@ -145,6 +145,10 @@ private:
       return false;
     }
 
+    // The two per-arm LIN plans are reduced to one combined dual-arm trajectory
+    // by concatenating robot1 and robot2 joint values into shared start/end
+    // points. The longer of the two end times is used for the merged goal so
+    // both arms are dispatched in one controller goal and start together.
     moveit_msgs::msg::RobotTrajectory combined_trajectory;
     auto & combined_jt = combined_trajectory.joint_trajectory;
     combined_jt.header.stamp = jt1.header.stamp;
