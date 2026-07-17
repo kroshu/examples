@@ -117,8 +117,14 @@ public:
     }
   }
 
-  moveit_msgs::msg::RobotTrajectory::SharedPtr planToPosition(const std::vector<double> & joint_pos)
+  moveit_msgs::msg::RobotTrajectory::SharedPtr planToPosition(
+    const std::vector<double> & joint_pos,
+    const std::string & planning_pipeline = "ompl",
+    const std::string & planner_id = "RRTConnectkConfigDefault")
   {
+    move_group_interface_->setPlanningPipelineId(planning_pipeline);
+    move_group_interface_->setPlannerId(planner_id);
+    move_group_interface_->setStartStateToCurrentState();
     move_group_interface_->setJointValueTarget(joint_pos);
 
     moveit::planning_interface::MoveGroupInterface::Plan plan;
@@ -135,27 +141,6 @@ public:
     }
   }
 
-  moveit_msgs::msg::RobotTrajectory::SharedPtr planToJointTargets(
-    const std::map<std::string, double> & joint_targets,
-    const std::string & planning_pipeline = "ompl",
-    const std::string & planner_id = "RRTConnectkConfigDefault")
-  {
-    move_group_interface_->setPlanningPipelineId(planning_pipeline);
-    move_group_interface_->setPlannerId(planner_id);
-    move_group_interface_->setStartStateToCurrentState();
-    move_group_interface_->setJointValueTarget(joint_targets);
-
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
-    RCLCPP_INFO(LOGGER, "Sending planning request");
-    if (!move_group_interface_->plan(plan))
-    {
-      RCLCPP_INFO(LOGGER, "Planning failed");
-      return nullptr;
-    }
-
-    RCLCPP_INFO(LOGGER, "Planning successful");
-    return std::make_shared<moveit_msgs::msg::RobotTrajectory>(plan.trajectory);
-  }
 
   moveit_msgs::msg::RobotTrajectory::SharedPtr planToPoseTargets(
     const std::map<std::string, geometry_msgs::msg::Pose> & pose_targets,

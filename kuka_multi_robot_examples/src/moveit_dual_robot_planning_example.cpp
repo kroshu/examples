@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <map>
+#include <array>
 #include <memory>
 #include <string>
 #include <thread>
@@ -25,18 +25,22 @@
 
 namespace
 {
+constexpr double kCartesianXOffset = 0.10;
+constexpr double kCartesianYOffset = 0.0;
+constexpr double kCartesianZOffset = 0.0;
+constexpr double kHalfPi = 1.5707963267948966;
+constexpr std::size_t kRobot1Joint1Index = 0;
+constexpr std::size_t kRobot2Joint1Index = 6;
+constexpr std::array<double, 12> kDualHomeJointPositions = {
+  0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0,
+  0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0};
+
 class DualRobotMoveitExample : public MoveitExample
 {
 public:
   DualRobotMoveitExample()
   : MoveitExample("moveit_dual_robot_planning_example", "dual_manipulator")
-  {
-    this->set_parameter(rclcpp::Parameter("use_sim_time", true));
-    this->declare_parameter("cartesian_enabled", true);
-    this->declare_parameter("cartesian_x_offset", 0.10);
-    this->declare_parameter("cartesian_y_offset", 0.0);
-    this->declare_parameter("cartesian_z_offset", 0.0);
-  }
+  {}
 
   bool run()
   {
@@ -45,58 +49,25 @@ public:
     move_group->startStateMonitor(2.0);
 
     // Try a coordinated Cartesian request first for both TCPs.
-    const bool cartesian_enabled = this->get_parameter("cartesian_enabled").as_bool();
-    if (cartesian_enabled) {
-      if (planAndExecutePerArmCartesianPath()) {
-        return true;
-      }
-
-      RCLCPP_WARN(
-        this->get_logger(),
-        "per-arm Cartesian planning failed, falling back to OMPL dual-group joint-space planning");
-    } else {
-      RCLCPP_INFO(this->get_logger(), "cartesian_enabled=false, using OMPL joint-space planning");
+    if (!planAndExecutePerArmCartesianPath()) {
+        RCLCPP_ERROR(this->get_logger(), "per-arm Cartesian planning/execution failed, aborting");
+        return false;
     }
+    RCLCPP_INFO(this->get_logger(), "per-arm Cartesian step completed, continuing with joint motion");
 
-    auto current_state = move_group->getCurrentState(2.0);
-    if (!current_state) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "failed to fetch current robot state for group '%s' (check use_sim_time / joint_states timestamps)",
-        planningGroup().c_str());
-      return false;
-    }
+    return planAndExecuteJointMotion();
+  }
 
-    const moveit::core::JointModelGroup * joint_model_group =
-      current_state->getJointModelGroup(planningGroup());
-    if (!joint_model_group) {
-      RCLCPP_ERROR(this->get_logger(), "joint model group '%s' not found", planningGroup().c_str());
-      return false;
-    }
+private:
+  bool planAndExecuteJointMotion()
+  {
+    std::vector<double> joint_goal(
+      kDualHomeJointPositions.begin(), kDualHomeJointPositions.end());
 
-    std::vector<std::string> joint_names = joint_model_group->getVariableNames();
-    if (joint_names.empty()) {
-      RCLCPP_ERROR(this->get_logger(), "no joint variables available for group '%s'", planningGroup().c_str());
-      return false;
-    }
+    joint_goal[kRobot1Joint1Index] += -0.15;
+    joint_goal[kRobot2Joint1Index] += 0.15;
 
-    std::map<std::string, double> joint_goal;
-    for (const auto & joint_name : joint_names) {
-      joint_goal[joint_name] = current_state->getVariablePosition(joint_name);
-    }
-
-    if (joint_goal.count("robot1_joint_1") == 0 || joint_goal.count("robot2_joint_1") == 0) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "group '%s' does not contain both robot1_joint_1 and robot2_joint_1",
-        planningGroup().c_str());
-      return false;
-    }
-
-    joint_goal["robot1_joint_1"] += -0.15;
-    joint_goal["robot2_joint_1"] += 0.15;
-
-    auto trajectory = planToJointTargets(joint_goal, "ompl", "RRTConnectkConfigDefault");
+    auto trajectory = planToPosition(joint_goal, "ompl", "RRTConnectkConfigDefault");
     if (!trajectory) {
       RCLCPP_ERROR(this->get_logger(), "planning failed for group '%s'", planningGroup().c_str());
       return false;
@@ -113,13 +84,8 @@ public:
     return true;
   }
 
-private:
   bool planAndExecutePerArmCartesianPath()
   {
-    const double x_offset = this->get_parameter("cartesian_x_offset").as_double();
-    const double y_offset = this->get_parameter("cartesian_y_offset").as_double();
-    const double z_offset = this->get_parameter("cartesian_z_offset").as_double();
-
     moveit::planning_interface::MoveGroupInterface robot1_group(shared_from_this(), "robot1_manipulator");
     moveit::planning_interface::MoveGroupInterface robot2_group(shared_from_this(), "robot2_manipulator");
 
@@ -133,15 +99,15 @@ private:
 
     geometry_msgs::msg::Pose robot1_target;
     robot1_target = robot1_current;
-    robot1_target.position.x += x_offset;
-    robot1_target.position.y += y_offset;
-    robot1_target.position.z += z_offset;
+    robot1_target.position.x += kCartesianXOffset;
+    robot1_target.position.y += kCartesianYOffset;
+    robot1_target.position.z += kCartesianZOffset;
 
     geometry_msgs::msg::Pose robot2_target;
     robot2_target = robot2_current;
-    robot2_target.position.x += x_offset;
-    robot2_target.position.y += y_offset;
-    robot2_target.position.z += z_offset;
+    robot2_target.position.x += kCartesianXOffset;
+    robot2_target.position.y += kCartesianYOffset;
+    robot2_target.position.z += kCartesianZOffset;
 
     robot1_group.setPlanningPipelineId("pilz_industrial_motion_planner");
     robot1_group.setPlannerId("LIN");
@@ -151,6 +117,9 @@ private:
     robot1_group.setPoseTarget(robot1_target, "robot1_tool0");
     robot2_group.setPoseTarget(robot2_target, "robot2_tool0");
 
+    // KDL IK solves single chains only, so Cartesian LIN cannot be solved on the
+    // composed dual_manipulator group. Plan one trajectory per arm, then merge
+    // and execute as one dual-arm goal to keep synchronized start.
     moveit::planning_interface::MoveGroupInterface::Plan robot1_plan;
     moveit::planning_interface::MoveGroupInterface::Plan robot2_plan;
     const bool robot1_planned = static_cast<bool>(robot1_group.plan(robot1_plan));
