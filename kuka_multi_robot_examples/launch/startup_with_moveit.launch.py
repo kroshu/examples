@@ -61,6 +61,17 @@ def launch_setup(context, *args, **kwargs):
     with open(moveit_config_path + "/kinematics.yaml", "r") as f:
         kinematics_config = yaml.safe_load(f)
 
+    # Remap base single-arm kinematics config to prefixed multi-robot group names.
+    base_kinematics_cfg = kinematics_config.get("manipulator", {})
+    if base_kinematics_cfg:
+        kinematics_config = {
+            "robot1_manipulator": dict(base_kinematics_cfg),
+            "robot2_manipulator": dict(base_kinematics_cfg),
+        }
+    robot_description_kinematics = {
+        "robot_description_kinematics": kinematics_config
+    }
+
     with open(moveit_config_path + "/moveit_controllers.yaml", "r") as f:
         moveit_controllers_config = yaml.safe_load(f)
 
@@ -89,6 +100,23 @@ def launch_setup(context, *args, **kwargs):
 
     with open(moveit_config_path + "/pilz_cartesian_limits.yaml", "r") as f:
         pilz_cartesian_limits_config = yaml.safe_load(f)
+
+    pilz_pipeline_config = {
+        "planning_plugins": ["pilz_industrial_motion_planner/CommandPlanner"],
+        "planning_plugin": "pilz_industrial_motion_planner/CommandPlanner",
+        "request_adapters": [
+            "default_planning_request_adapters/ResolveConstraintFrames",
+            "default_planning_request_adapters/ValidateWorkspaceBounds",
+            "default_planning_request_adapters/CheckStartStateBounds",
+            "default_planning_request_adapters/CheckStartStateCollision",
+        ],
+        "response_adapters": [
+            "default_planning_response_adapters/AddTimeOptimalParameterization",
+            "default_planning_response_adapters/ValidateSolution",
+            "default_planning_response_adapters/DisplayMotionPath",
+        ],
+        "start_state_max_bounds_error": 0.1,
+    }
 
     with open(
         get_package_share_directory("kuka_agilus_support")
@@ -124,6 +152,7 @@ def launch_setup(context, *args, **kwargs):
             "default_acceleration_scaling_factor", 1.0
         ),
         "joint_limits": prefixed_joint_limits,
+        "cartesian_limits": pilz_cartesian_limits_config.get("cartesian_limits", {}),
     }
 
     move_group_server = Node(
@@ -134,22 +163,16 @@ def launch_setup(context, *args, **kwargs):
             {"robot_description_semantic": ParameterValue(srdf_content, value_type=str)},
             {"publish_robot_description": True},
             {"publish_robot_description_semantic": True},
-            {"planning_pipelines": ["ompl"]},
+            {"planning_pipelines": ["ompl", "pilz_industrial_motion_planner"]},
             {"default_planning_pipeline": "ompl"},
             {"robot_description_planning": robot_description_planning},
-            kinematics_config,
+            robot_description_kinematics,
             moveit_controllers_config,
             {"ompl": ompl_pipeline_config},
-            pilz_cartesian_limits_config,
+            {"pilz_industrial_motion_planner": pilz_pipeline_config},
         ],
     )
 
-    robot_description_kinematics = {
-        "robot_description_kinematics": {
-            "robot1_manipulator": {"kinematics_solver": "kdl_kinematics_plugin/KDLKinematicsPlugin"},
-            "robot2_manipulator": {"kinematics_solver": "kdl_kinematics_plugin/KDLKinematicsPlugin"}
-        }
-    }
     rviz = Node(
         package="rviz2",
         executable="rviz2",
