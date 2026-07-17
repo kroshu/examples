@@ -34,6 +34,7 @@ def launch_setup(context, *args, **kwargs):
     driver_version = LaunchConfiguration("driver_version")
     controller_config = LaunchConfiguration("controller_config")
     roundtrip_time = LaunchConfiguration("roundtrip_time")
+    verify_robot_model = LaunchConfiguration("verify_robot_model")
     ns = LaunchConfiguration("namespace")
     non_rt_cores = LaunchConfiguration("non_rt_cores")
     rt_core = LaunchConfiguration("rt_core")
@@ -142,6 +143,9 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "use_gpio2:=",
             use_gpio2,
+            " ",
+            "verify_robot_model:=",
+            verify_robot_model,
         ],
         on_stderr="capture",
     )
@@ -288,6 +292,11 @@ def generate_launch_description():
     
     launch_arguments.append(DeclareLaunchArgument("namespace", default_value=""))
     launch_arguments.append(DeclareLaunchArgument("roundtrip_time", default_value="4000"))
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "verify_robot_model", default_value="true", choices=["true", "false"]
+        )
+    )
     launch_arguments.append(
         DeclareLaunchArgument(
             "rt_core",
