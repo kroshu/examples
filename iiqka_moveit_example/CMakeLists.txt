@@ -12,6 +12,12 @@ find_package(moveit_visual_tools REQUIRED)
 
 include_directories(include)
 
+ament_export_include_directories(include)
+ament_export_dependencies(
+  moveit_ros_planning_interface
+  moveit_visual_tools
+)
+
 add_executable(moveit_basic_planners_example src/moveit_basic_planners_example.cpp)
 ament_target_dependencies(moveit_basic_planners_example
   moveit_ros_planning_interface
@@ -49,6 +55,9 @@ install(DIRECTORY launch
 )
 install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
+)
+install(DIRECTORY include/
+  DESTINATION include
 )
 
 if(BUILD_TESTING)
