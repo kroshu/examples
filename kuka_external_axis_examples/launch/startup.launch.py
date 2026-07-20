@@ -198,8 +198,7 @@ def launch_setup(context):
         controllers["kss_message_handler"] = None
 
     controller_spawners = [
-        controller_spawner(name, param_file)
-        for name, param_file in controllers.items()
+        controller_spawner(name, param_file) for name, param_file in controllers.items()
     ]
 
     nodes_to_start = [
