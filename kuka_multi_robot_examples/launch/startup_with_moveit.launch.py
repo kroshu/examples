@@ -1,4 +1,4 @@
-# Copyright 2023 KUKA Hungaria Kft.
+# Copyright 2026 KUKA Hungaria Kft.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,50 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 import yaml
 
+# Multi-robot configuration constants
+NUM_ROBOTS = 2
+ROBOT_INDICES = range(1, NUM_ROBOTS + 1)
+ROBOT_PREFIXES = [f"robot{i}" for i in ROBOT_INDICES]
+SINGLE_ARM_GROUP = "manipulator"
+
+
+def _remap_config_for_robots(base_cfg: dict, group_name: str = SINGLE_ARM_GROUP) -> dict:
+    """Remap single-arm config to multi-robot groups with prefixed names."""
+    base_group_cfg = base_cfg.get(group_name, {})
+    if not base_group_cfg:
+        return {}
+    return {f"{prefix}_{group_name}": dict(base_group_cfg) for prefix in ROBOT_PREFIXES}
+
+
+def _prefix_joint_names(joint_dict: dict) -> tuple[dict, list]:
+    """Prefix joint names for all robots and return dict and flat list.
+    
+    Returns:
+        (prefixed_joint_dict, prefixed_joint_names_list)
+    """
+    prefixed_joints = {}
+    prefixed_names = []
+    for joint_name, limits in joint_dict.items():
+        for prefix in ROBOT_PREFIXES:
+            prefixed_name = f"{prefix}_{joint_name}"
+            prefixed_joints[prefixed_name] = dict(limits)
+            prefixed_names.append(prefixed_name)
+    return prefixed_joints, prefixed_names
+
+
+def _update_controller_joints(controllers_cfg: dict, joint_names: list) -> dict:
+    """Update all controller configs with prefixed joint names."""
+    controller_names = controllers_cfg.get("moveit_simple_controller_manager", {}).get(
+        "controller_names", []
+    )
+    for controller_name in controller_names:
+        controller_cfg = controllers_cfg.get("moveit_simple_controller_manager", {}).get(
+            controller_name
+        )
+        if isinstance(controller_cfg, dict) and "joints" in controller_cfg:
+            controller_cfg["joints"] = joint_names
+    return controllers_cfg
+
 
 def launch_setup(context, *args, **kwargs):
     rviz_config_file = (
@@ -38,7 +82,10 @@ def launch_setup(context, *args, **kwargs):
         ),
     )
 
-    # Manual MoveIt configuration for multi-robot KR setup
+    # Manual MoveIt configuration for multi-robot KR setup.
+    # MoveIt config builder cannot be used as it expects URDF and SRDF files
+    # to be located in the moveit support package, but this multi-robot setup
+    # uses custom SRDF files stored in kuka_multi_robot_examples.
     srdf_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -58,66 +105,42 @@ def launch_setup(context, *args, **kwargs):
         get_package_share_directory("kuka_kr_moveit_config") + "/config"
     )
 
+    # Load and remap kinematics configuration
     with open(moveit_config_path + "/kinematics.yaml", "r") as f:
         kinematics_config = yaml.safe_load(f)
+    kinematics_config = _remap_config_for_robots(kinematics_config)
+    robot_description_kinematics = {"robot_description_kinematics": kinematics_config}
 
-    # Remap base single-arm kinematics config to prefixed multi-robot group names.
-    base_kinematics_cfg = kinematics_config.get("manipulator", {})
-    if base_kinematics_cfg:
-        kinematics_config = {
-            "robot1_manipulator": dict(base_kinematics_cfg),
-            "robot2_manipulator": dict(base_kinematics_cfg),
-        }
-    robot_description_kinematics = {
-        "robot_description_kinematics": kinematics_config
-    }
-
+    # Load MoveIt controllers configuration
     with open(moveit_config_path + "/moveit_controllers.yaml", "r") as f:
         moveit_controllers_config = yaml.safe_load(f)
 
+    # Load and remap OMPL planning configuration
     with open(moveit_config_path + "/ompl_planning.yaml", "r") as f:
         ompl_config = yaml.safe_load(f)
-
     ompl_pipeline_config = dict(ompl_config)
-    planning_plugins = ompl_pipeline_config.get("planning_plugins", [])
-    ompl_pipeline_config["planning_plugin"] = (
-        planning_plugins[0] if planning_plugins else "ompl_interface/OMPLPlanner"
-    )
-    base_group_cfg = ompl_pipeline_config.get("manipulator", {})
+
+    # Remap OMPL groups for multi-robot and add projection evaluators
+    base_group_cfg = ompl_pipeline_config.get(SINGLE_ARM_GROUP, {})
     if base_group_cfg:
-        robot1_group_cfg = dict(base_group_cfg)
-        robot1_group_cfg["projection_evaluator"] = "joints(robot1_joint_1,robot1_joint_2)"
+        for i, prefix in enumerate(ROBOT_PREFIXES):
+            group_cfg = dict(base_group_cfg)
+            group_cfg["projection_evaluator"] = f"joints({prefix}_joint_1,{prefix}_joint_2)"
+            ompl_pipeline_config[f"{prefix}_{SINGLE_ARM_GROUP}"] = group_cfg
+        
+        # Add dual manipulator group
+        dual_cfg = dict(base_group_cfg)
+        dual_cfg["projection_evaluator"] = "joints(robot1_joint_1,robot2_joint_1)"
+        ompl_pipeline_config["dual_manipulator"] = dual_cfg
 
-        robot2_group_cfg = dict(base_group_cfg)
-        robot2_group_cfg["projection_evaluator"] = "joints(robot2_joint_1,robot2_joint_2)"
-
-        dual_group_cfg = dict(base_group_cfg)
-        dual_group_cfg["projection_evaluator"] = "joints(robot1_joint_1,robot2_joint_1)"
-
-        ompl_pipeline_config["robot1_manipulator"] = robot1_group_cfg
-        ompl_pipeline_config["robot2_manipulator"] = robot2_group_cfg
-        ompl_pipeline_config["dual_manipulator"] = dual_group_cfg
-
+    # Load Pilz planning configuration
     with open(moveit_config_path + "/pilz_cartesian_limits.yaml", "r") as f:
         pilz_cartesian_limits_config = yaml.safe_load(f)
 
-    pilz_pipeline_config = {
-        "planning_plugins": ["pilz_industrial_motion_planner/CommandPlanner"],
-        "planning_plugin": "pilz_industrial_motion_planner/CommandPlanner",
-        "request_adapters": [
-            "default_planning_request_adapters/ResolveConstraintFrames",
-            "default_planning_request_adapters/ValidateWorkspaceBounds",
-            "default_planning_request_adapters/CheckStartStateBounds",
-            "default_planning_request_adapters/CheckStartStateCollision",
-        ],
-        "response_adapters": [
-            "default_planning_response_adapters/AddTimeOptimalParameterization",
-            "default_planning_response_adapters/ValidateSolution",
-            "default_planning_response_adapters/DisplayMotionPath",
-        ],
-        "start_state_max_bounds_error": 0.1,
-    }
+    with open(moveit_config_path + "/pilz_industrial_motion_planner_planning.yaml", "r") as f:
+        pilz_pipeline_config = yaml.safe_load(f)
 
+    # Load and prefix joint limits
     with open(
         get_package_share_directory("kuka_agilus_support")
         + "/config/kr6_r700_2_joint_limits.yaml",
@@ -126,24 +149,12 @@ def launch_setup(context, *args, **kwargs):
         base_joint_limits_config = yaml.safe_load(f)
 
     base_joint_limits = base_joint_limits_config.get("joint_limits", {})
-    prefixed_joint_limits = {}
-    prefixed_joint_names = []
-    for joint_name, limits in base_joint_limits.items():
-        prefixed_joint_limits[f"robot1_{joint_name}"] = dict(limits)
-        prefixed_joint_limits[f"robot2_{joint_name}"] = dict(limits)
-        prefixed_joint_names.append(f"robot1_{joint_name}")
-        prefixed_joint_names.append(f"robot2_{joint_name}")
+    prefixed_joint_limits, prefixed_joint_names = _prefix_joint_names(base_joint_limits)
 
-    controller_names = moveit_controllers_config.get(
-        "moveit_simple_controller_manager", {}
-    ).get("controller_names", [])
-    for controller_name in controller_names:
-        controller_cfg = moveit_controllers_config.get(
-            "moveit_simple_controller_manager", {}
-        ).get(controller_name)
-        if isinstance(controller_cfg, dict) and "joints" in controller_cfg:
-            controller_cfg["joints"] = prefixed_joint_names
+    # Update controller configurations with prefixed joint names
+    moveit_controllers_config = _update_controller_joints(moveit_controllers_config, prefixed_joint_names)
 
+    # Build planning description
     robot_description_planning = {
         "default_velocity_scaling_factor": base_joint_limits_config.get(
             "default_velocity_scaling_factor", 1.0
