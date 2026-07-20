@@ -124,7 +124,6 @@ public:
   {
     move_group_interface_->setPlanningPipelineId(planning_pipeline);
     move_group_interface_->setPlannerId(planner_id);
-    move_group_interface_->setStartStateToCurrentState();
     move_group_interface_->setJointValueTarget(joint_pos);
 
     moveit::planning_interface::MoveGroupInterface::Plan plan;
