@@ -27,10 +27,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context, *args, **kwargs):
-    robot_model = LaunchConfiguration("robot_model")
-    robot_family = LaunchConfiguration("robot_family")
     mode = LaunchConfiguration("mode")
-    use_gpio = LaunchConfiguration("use_gpio")
     driver_version = LaunchConfiguration("driver_version")
     controller_config = LaunchConfiguration("controller_config")
     roundtrip_time = LaunchConfiguration("roundtrip_time")
@@ -40,6 +37,8 @@ def launch_setup(context, *args, **kwargs):
     rt_core = LaunchConfiguration("rt_core")
     rt_prio = LaunchConfiguration("rt_prio")
     lock_memory = LaunchConfiguration("lock_memory")
+    async_thread_priority = LaunchConfiguration("async_thread_priority")
+    async_affinity = LaunchConfiguration("async_affinity")
     if ns.perform(context) == "":
         tf_prefix = ""
     else:
@@ -126,6 +125,9 @@ def launch_setup(context, *args, **kwargs):
             "use_gpio:=",
             use_gpio,
             " ",
+            "roundtrip_time:=",
+            roundtrip_time,
+            " ",
             "prefix2:=",
             prefix2,
             " ",
@@ -146,6 +148,12 @@ def launch_setup(context, *args, **kwargs):
             " ",
             "verify_robot_model:=",
             verify_robot_model,
+            " ",
+            "async_thread_priority:=",
+            async_thread_priority,
+            " ",
+            "async_affinity:=",
+            async_affinity,
         ],
         on_stderr="capture",
     )
@@ -257,8 +265,6 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     launch_arguments = []
-    launch_arguments.append(DeclareLaunchArgument("robot_model", default_value="kr6_r700_sixx"))
-    launch_arguments.append(DeclareLaunchArgument("robot_family", default_value="agilus"))
     launch_arguments.append(DeclareLaunchArgument("mode", default_value="hardware"))
     launch_arguments.append(DeclareLaunchArgument("controller_config", default_value=""))
     launch_arguments.append(
@@ -291,6 +297,8 @@ def generate_launch_description():
     )
     
     launch_arguments.append(DeclareLaunchArgument("namespace", default_value=""))
+    launch_arguments.append(DeclareLaunchArgument("async_thread_priority", default_value="69"))
+    launch_arguments.append(DeclareLaunchArgument("async_affinity", default_value=""))
     launch_arguments.append(DeclareLaunchArgument("roundtrip_time", default_value="4000"))
     launch_arguments.append(
         DeclareLaunchArgument(
