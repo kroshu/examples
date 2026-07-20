@@ -298,7 +298,7 @@ def generate_launch_description():
     
     launch_arguments.append(DeclareLaunchArgument("namespace", default_value=""))
     launch_arguments.append(DeclareLaunchArgument("async_thread_priority", default_value="69"))
-    launch_arguments.append(DeclareLaunchArgument("async_affinity", default_value=""))
+    launch_arguments.append(DeclareLaunchArgument("async_affinity", default_value="[]"))
     launch_arguments.append(DeclareLaunchArgument("roundtrip_time", default_value="4000"))
     launch_arguments.append(
         DeclareLaunchArgument(
