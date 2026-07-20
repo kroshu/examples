@@ -38,6 +38,7 @@ The `kuka_multi_robot_examples` package demonstrates running multiple KUKA robot
 - `startup.launch.py`: Core multi-robot launcher (all features, configurable)
 - `startup_with_rviz.launch.py`: Startup with RViz visualization
 - `startup_with_moveit.launch.py`: Startup with MoveIt 2 motion planning
+    - MoveitConfigsBuilder cannot be used here, therefore all configurations have to be loaded manually. The launch files only loads ompl and pilz planning configurations.
 
 **Available launch arguments:**
 
