@@ -19,7 +19,6 @@ from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import LifecycleNode, Node
 from launch_ros.substitutions import FindPackageShare
-import os
 
 
 def launch_setup(context):
@@ -38,6 +37,7 @@ def launch_setup(context):
     yaw = LaunchConfiguration("yaw")
     roundtrip_time = LaunchConfiguration("roundtrip_time")
     verify_robot_model = LaunchConfiguration("verify_robot_model")
+    rsi_xml_config_file = LaunchConfiguration("rsi_xml_config_file")
     ns = LaunchConfiguration("namespace")
     controller_config = LaunchConfiguration("controller_config")
     jtc_config = LaunchConfiguration("jtc_config")
@@ -114,6 +114,9 @@ def launch_setup(context):
             " ",
             "verify_robot_model:=",
             verify_robot_model,
+            " ",
+            "rsi_xml_config_file:=",
+            rsi_xml_config_file,
         ],
         on_stderr="capture",
     )
@@ -195,8 +198,7 @@ def launch_setup(context):
         controllers["kss_message_handler"] = None
 
     controller_spawners = [
-        controller_spawner(name, param_file)
-        for name, param_file in controllers.items()
+        controller_spawner(name, param_file) for name, param_file in controllers.items()
     ]
 
     nodes_to_start = [
@@ -239,6 +241,17 @@ def generate_launch_description():
     launch_arguments.append(
         DeclareLaunchArgument(
             "verify_robot_model", default_value="true", choices=["true", "false"]
+        )
+    )
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "rsi_xml_config_file",
+            default_value="",
+            description=(
+                "Absolute path to an RSI XML config YAML file. "
+                "When set, configures the XML element/attribute names used in RSI messages. "
+                "Leave empty to use the SDK defaults."
+            ),
         )
     )
     launch_arguments.append(DeclareLaunchArgument("controller_config", default_value=""))
