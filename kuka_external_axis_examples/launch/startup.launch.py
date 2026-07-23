@@ -42,6 +42,9 @@ def launch_setup(context):
     controller_config = LaunchConfiguration("controller_config")
     jtc_config = LaunchConfiguration("jtc_config")
     gpio_config = LaunchConfiguration("gpio_config")
+    event_broadcaster_config = LaunchConfiguration("event_broadcaster_config")
+    control_mode_handler_config = LaunchConfiguration("control_mode_handler_config")
+    kss_message_handler_config = LaunchConfiguration("kss_message_handler_config")
     if ns.perform(context) == "":
         tf_prefix = ""
     else:
@@ -175,15 +178,15 @@ def launch_setup(context):
     controllers = {
         "joint_state_broadcaster": None,
         "joint_trajectory_controller": jtc_config,
-        "event_broadcaster": None,
+        "event_broadcaster": event_broadcaster_config,
     }
 
     if use_gpio.perform(context) == "true":
         controllers["gpio_controller"] = gpio_config
 
     if driver_version.perform(context) in {"eki_rsi", "mxa_rsi"}:
-        controllers["control_mode_handler"] = None
-        controllers["kss_message_handler"] = None
+        controllers["control_mode_handler"] = control_mode_handler_config
+        controllers["kss_message_handler"] = kss_message_handler_config
 
     controller_spawners = [
         controller_spawner(name, param_file) for name, param_file in controllers.items()
@@ -244,6 +247,27 @@ def generate_launch_description():
             "gpio_config",
             default_value=get_package_share_directory("kuka_rsi_driver")
             + "/config/gpio_controller_config.yaml",
+        )
+    )
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "event_broadcaster_config",
+            default_value=get_package_share_directory("kuka_external_axis_examples")
+            + "/config/kuka_event_broadcaster_config.yaml",
+        )
+    )
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "control_mode_handler_config",
+            default_value=get_package_share_directory("kuka_external_axis_examples")
+            + "/config/kuka_control_mode_handler_config.yaml",
+        )
+    )
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "kss_message_handler_config",
+            default_value=get_package_share_directory("kuka_external_axis_examples")
+            + "/config/kuka_kss_message_handler_config.yaml",
         )
     )
 
