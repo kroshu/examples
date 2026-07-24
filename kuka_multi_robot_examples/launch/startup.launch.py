@@ -72,7 +72,7 @@ def launch_setup(context, *args, **kwargs):
             else "/config/ros2_controller_config_extended.yaml"
         )
         controller_config = (
-            get_package_share_directory("kuka_rsi_driver") + rel_path_to_config_file
+            get_package_share_directory("kuka_multi_robot_examples") + rel_path_to_config_file
         )
 
     # Get URDF via xacro
@@ -163,6 +163,8 @@ def launch_setup(context, *args, **kwargs):
     # The driver config contains only parameters that can be changed after startup
     driver_config = get_package_share_directory("kuka_rsi_driver") + "/config/driver_config.yaml"
 
+    # Workaround needed for multi-robot setup: detached mode uses a sleep_until based on update_rate. 
+    # Until slave/external mode is supported, controller_manager update_rate is increased to minimize sleep
     control_node = Node(
         namespace=ns,
         package="kuka_drivers_core",
