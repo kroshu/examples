@@ -1,4 +1,4 @@
-# Example RSI XML message configuration for a standard 6-axis KSS robot.
+# Example RSI XML message configuration for a 6-axis KSS robot with an external axis.
 #
 # Pass the path to this file (or a copy of it) to the driver via the
 # 'rsi_xml_config_file' hardware parameter in your robot's URDF/xacro.
