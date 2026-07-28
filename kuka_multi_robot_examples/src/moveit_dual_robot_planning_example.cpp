@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -33,6 +36,87 @@ constexpr std::size_t kRobot1Joint1Index = 0;
 constexpr std::size_t kRobot2Joint1Index = 6;
 constexpr std::array<double, 12> kDualHomeJointPositions = {0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0,
                                                             0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0};
+
+// Convert builtin_interfaces::msg::Duration to seconds as double
+double durationToSeconds(const builtin_interfaces::msg::Duration & d)
+{
+  return static_cast<double>(d.sec) + static_cast<double>(d.nanosec) * 1e-9;
+}
+
+// Convert seconds to builtin_interfaces::msg::Duration
+builtin_interfaces::msg::Duration secondsToDuration(double seconds)
+{
+  builtin_interfaces::msg::Duration d;
+  d.sec = static_cast<int32_t>(seconds);
+  d.nanosec = static_cast<uint32_t>((seconds - d.sec) * 1e9);
+  return d;
+}
+
+// Linear interpolation between two trajectory points at a given time
+trajectory_msgs::msg::JointTrajectoryPoint interpolatePoint(
+  const trajectory_msgs::msg::JointTrajectoryPoint & p1,
+  const trajectory_msgs::msg::JointTrajectoryPoint & p2, double t1, double t2, double t)
+{
+  trajectory_msgs::msg::JointTrajectoryPoint result;
+  const double alpha = (t2 > t1) ? (t - t1) / (t2 - t1) : 0.0;
+
+  result.positions.resize(p1.positions.size());
+  for (size_t i = 0; i < p1.positions.size(); ++i)
+  {
+    result.positions[i] = p1.positions[i] + alpha * (p2.positions[i] - p1.positions[i]);
+  }
+
+  // Interpolate velocities if available
+  if (!p1.velocities.empty() && !p2.velocities.empty())
+  {
+    result.velocities.resize(p1.velocities.size());
+    for (size_t i = 0; i < p1.velocities.size(); ++i)
+    {
+      result.velocities[i] = p1.velocities[i] + alpha * (p2.velocities[i] - p1.velocities[i]);
+    }
+  }
+
+  // Interpolate accelerations if available
+  if (!p1.accelerations.empty() && !p2.accelerations.empty())
+  {
+    result.accelerations.resize(p1.accelerations.size());
+    for (size_t i = 0; i < p1.accelerations.size(); ++i)
+    {
+      result.accelerations[i] =
+        p1.accelerations[i] + alpha * (p2.accelerations[i] - p1.accelerations[i]);
+    }
+  }
+
+  result.time_from_start = secondsToDuration(t);
+  return result;
+}
+
+// Sample a trajectory at a specific time, interpolating between points if needed
+trajectory_msgs::msg::JointTrajectoryPoint sampleTrajectoryAtTime(
+  const trajectory_msgs::msg::JointTrajectory & traj, double t)
+{
+  if (traj.points.empty())
+  {
+    return {};
+  }
+
+  // Find the two points that bracket the requested time
+  for (size_t i = 0; i < traj.points.size() - 1; ++i)
+  {
+    const double t1 = durationToSeconds(traj.points[i].time_from_start);
+    const double t2 = durationToSeconds(traj.points[i + 1].time_from_start);
+
+    if (t >= t1 && t <= t2)
+    {
+      return interpolatePoint(traj.points[i], traj.points[i + 1], t1, t2, t);
+    }
+  }
+
+  // If past the end, return the last point
+  auto last_point = traj.points.back();
+  last_point.time_from_start = secondsToDuration(t);
+  return last_point;
+}
 
 class DualRobotMoveitExample : public MoveitExample
 {
@@ -150,10 +234,11 @@ private:
       return false;
     }
 
-    // The two per-arm LIN plans are reduced to one combined dual-arm trajectory
-    // by concatenating robot1 and robot2 joint values into shared start/end
-    // points. The longer of the two end times is used for the merged goal so
-    // both arms are dispatched in one controller goal and start together.
+    // The two per-arm LIN plans are merged into one combined dual-arm trajectory
+    // by resampling both trajectories onto a unified timeline and concatenating
+    // the joint values at each time step. This preserves the Cartesian path that
+    // was validated by the LIN planner, rather than just interpolating between
+    // start and end points in joint space.
     moveit_msgs::msg::RobotTrajectory combined_trajectory;
     auto & combined_jt = combined_trajectory.joint_trajectory;
     combined_jt.header.stamp = jt1.header.stamp;
@@ -161,29 +246,55 @@ private:
     combined_jt.joint_names.insert(
       combined_jt.joint_names.end(), jt2.joint_names.begin(), jt2.joint_names.end());
 
-    trajectory_msgs::msg::JointTrajectoryPoint start_point;
-    start_point.positions = jt1.points.front().positions;
-    start_point.positions.insert(
-      start_point.positions.end(), jt2.points.front().positions.begin(),
-      jt2.points.front().positions.end());
-    start_point.velocities.assign(start_point.positions.size(), 0.0);
-    start_point.accelerations.assign(start_point.positions.size(), 0.0);
+    // Collect all unique time points from both trajectories
+    std::set<double> time_points;
+    for (const auto & pt : jt1.points)
+    {
+      time_points.insert(durationToSeconds(pt.time_from_start));
+    }
+    for (const auto & pt : jt2.points)
+    {
+      time_points.insert(durationToSeconds(pt.time_from_start));
+    }
 
-    trajectory_msgs::msg::JointTrajectoryPoint goal_point;
-    goal_point.positions = jt1.points.back().positions;
-    goal_point.positions.insert(
-      goal_point.positions.end(), jt2.points.back().positions.begin(),
-      jt2.points.back().positions.end());
-    goal_point.velocities.assign(goal_point.positions.size(), 0.0);
-    goal_point.accelerations.assign(goal_point.positions.size(), 0.0);
+    // Sample both trajectories at each time point and combine
+    for (double t : time_points)
+    {
+      auto pt1 = sampleTrajectoryAtTime(jt1, t);
+      auto pt2 = sampleTrajectoryAtTime(jt2, t);
 
-    const auto t1 = jt1.points.back().time_from_start;
-    const auto t2 = jt2.points.back().time_from_start;
-    goal_point.time_from_start =
-      (t2.sec > t1.sec || (t2.sec == t1.sec && t2.nanosec > t1.nanosec)) ? t2 : t1;
+      trajectory_msgs::msg::JointTrajectoryPoint combined_pt;
+      combined_pt.positions = pt1.positions;
+      combined_pt.positions.insert(
+        combined_pt.positions.end(), pt2.positions.begin(), pt2.positions.end());
 
-    combined_jt.points.push_back(std::move(start_point));
-    combined_jt.points.push_back(std::move(goal_point));
+      // Combine velocities if available
+      if (!pt1.velocities.empty() && !pt2.velocities.empty())
+      {
+        combined_pt.velocities = pt1.velocities;
+        combined_pt.velocities.insert(
+          combined_pt.velocities.end(), pt2.velocities.begin(), pt2.velocities.end());
+      }
+      else
+      {
+        combined_pt.velocities.assign(combined_pt.positions.size(), 0.0);
+      }
+
+      // Combine accelerations if available
+      if (!pt1.accelerations.empty() && !pt2.accelerations.empty())
+      {
+        combined_pt.accelerations = pt1.accelerations;
+        combined_pt.accelerations.insert(
+          combined_pt.accelerations.end(), pt2.accelerations.begin(), pt2.accelerations.end());
+      }
+      else
+      {
+        combined_pt.accelerations.assign(combined_pt.positions.size(), 0.0);
+      }
+
+      combined_pt.time_from_start = secondsToDuration(t);
+      combined_jt.points.push_back(std::move(combined_pt));
+    }
 
     if (!executeTrajectory(combined_trajectory))
     {

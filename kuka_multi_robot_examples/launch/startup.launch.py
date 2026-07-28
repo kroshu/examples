@@ -39,10 +39,6 @@ def launch_setup(context, *args, **kwargs):
     lock_memory = LaunchConfiguration("lock_memory")
     async_thread_priority = LaunchConfiguration("async_thread_priority")
     async_affinity = LaunchConfiguration("async_affinity")
-    if ns.perform(context) == "":
-        tf_prefix = ""
-    else:
-        tf_prefix = ns.perform(context) + "_"
 
     # Parse allowed cores into a list of integers; allow formats like "2,3, 4" or "  "
     cores = []
@@ -95,7 +91,7 @@ def launch_setup(context, *args, **kwargs):
             " ",
             PathJoinSubstitution(
                 [
-                    FindPackageShare(f"kuka_multi_robot_examples"),
+                    FindPackageShare("kuka_multi_robot_examples"),
                     "urdf",
                     "multi_kr6_r700_2.urdf.xacro",
                 ]
@@ -163,6 +159,10 @@ def launch_setup(context, *args, **kwargs):
     # The driver config contains only parameters that can be changed after startup
     driver_config = get_package_share_directory("kuka_rsi_driver") + "/config/driver_config.yaml"
 
+    # Build hardware component names from prefix parameters
+    robot1_hw_name = prefix.perform(context) + "kr6_r700_2"
+    robot2_hw_name = prefix2.perform(context) + "kr6_r700_2"
+
     # Workaround needed for multi-robot setup: detached mode uses a sleep_until based on update_rate.
     # Until slave/external mode is supported, controller_manager update_rate is increased to minimize sleep
     control_node = Node(
@@ -177,7 +177,7 @@ def launch_setup(context, *args, **kwargs):
                 "thread_priority": int(rt_prio.perform(context)),
                 "lock_memory": lock_memory.perform(context) == "true",
                 "hardware_components_initial_state": {
-                    "unconfigured": ["robot1_kr6_r700_2", "robot2_kr6_r700_2"],
+                    "unconfigured": [robot1_hw_name, robot2_hw_name],
                 },
             },
         ],
@@ -195,7 +195,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[
             driver_config,
             {
-                "robot_models": ["robot1_kr6_r700_2", "robot2_kr6_r700_2"],
+                "robot_models": [robot1_hw_name, robot2_hw_name],
                 "use_gpio": use_gpio,
             },
         ],
@@ -211,13 +211,13 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # Spawn controllers
+    ns_str = ns.perform(context)
+
     def controller_spawner(controller_name, prefix_cmd, param_file=None, activate=False):
         arg_list = [
             controller_name,
             "-c",
             "controller_manager",
-            "-n",
-            ns,
         ]
 
         # Add param-file if it's provided
@@ -227,11 +227,17 @@ def launch_setup(context, *args, **kwargs):
         if not activate:
             arg_list.append("--inactive")
 
+        # Use namespace remapping instead of deprecated -n flag
+        remappings = []
+        if ns_str:
+            remappings.append(("/controller_manager", f"/{ns_str}/controller_manager"))
+
         return Node(
             package="controller_manager",
             executable="spawner",
             prefix=prefix_cmd,
             arguments=arg_list,
+            remappings=remappings if remappings else None,
         )
 
     controllers = {
@@ -243,6 +249,10 @@ def launch_setup(context, *args, **kwargs):
     }
 
     if use_gpio.perform(context) == "true":
+        gpio_config = (
+            get_package_share_directory("kuka_multi_robot_examples")
+            + "/config/gpio_controller_config.yaml"
+        )
         controllers["gpio_controller"] = gpio_config
 
     if driver_version.perform(context) in {"eki_rsi", "mxa_rsi"}:

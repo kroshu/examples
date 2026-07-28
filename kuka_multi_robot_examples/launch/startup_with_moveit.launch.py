@@ -116,19 +116,20 @@ def launch_setup(context, *args, **kwargs):
     # Load and remap OMPL planning configuration
     with open(moveit_config_path + "/ompl_planning.yaml") as f:
         ompl_config = yaml.safe_load(f)
-    ompl_pipeline_config = dict(ompl_config)
+    ompl_pipeline_config = {}
 
     # Remap OMPL groups for multi-robot and add projection evaluators
-    base_group_cfg = ompl_pipeline_config.get(SINGLE_ARM_GROUP, {})
+    base_group_cfg = ompl_config.get(SINGLE_ARM_GROUP, {})
     if base_group_cfg:
-        for i, prefix in enumerate(ROBOT_PREFIXES):
+        for prefix in ROBOT_PREFIXES:
             group_cfg = dict(base_group_cfg)
             group_cfg["projection_evaluator"] = f"joints({prefix}_joint_1,{prefix}_joint_2)"
             ompl_pipeline_config[f"{prefix}_{SINGLE_ARM_GROUP}"] = group_cfg
 
         # Add dual manipulator group
         dual_cfg = dict(base_group_cfg)
-        dual_cfg["projection_evaluator"] = "joints(robot1_joint_1,robot2_joint_1)"
+        projection_joints = ",".join(f"{p}_joint_1" for p in ROBOT_PREFIXES)
+        dual_cfg["projection_evaluator"] = f"joints({projection_joints})"
         ompl_pipeline_config["dual_manipulator"] = dual_cfg
 
     # Load Pilz planning configuration
