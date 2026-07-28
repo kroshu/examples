@@ -164,6 +164,7 @@ def launch_setup(context, *args, **kwargs):
         prefix.perform(context) + "kr6_r700_2",
         prefix2.perform(context) + "kr6_r700_2",
     ]
+    use_gpio_any = use_gpio.perform(context) == "true" or use_gpio2.perform(context) == "true"
 
     # Workaround: detached mode uses sleep_until based on update_rate. Until
     # slave/external mode is supported, update_rate is increased to minimize sleep.
@@ -198,7 +199,7 @@ def launch_setup(context, *args, **kwargs):
             driver_config,
             {
                 "robot_models": hw_names,
-                "use_gpio": use_gpio,
+                "use_gpio": use_gpio_any,
             },
         ],
         prefix=prefix_cmd,
@@ -250,7 +251,7 @@ def launch_setup(context, *args, **kwargs):
         + "/config/kuka_event_broadcaster_config.yaml",
     }
 
-    if use_gpio.perform(context) == "true":
+    if use_gpio_any:
         gpio_config = (
             get_package_share_directory("kuka_multi_robot_examples")
             + "/config/gpio_controller_config.yaml"
