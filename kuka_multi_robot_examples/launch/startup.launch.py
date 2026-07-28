@@ -88,7 +88,7 @@ def launch_setup(context, *args, **kwargs):
     client_port2 = LaunchConfiguration("client_port2")
     mxa_client_port2 = LaunchConfiguration("mxa_client_port2")
     controller_ip2 = LaunchConfiguration("controller_ip2")
-    
+
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -163,7 +163,7 @@ def launch_setup(context, *args, **kwargs):
     # The driver config contains only parameters that can be changed after startup
     driver_config = get_package_share_directory("kuka_rsi_driver") + "/config/driver_config.yaml"
 
-    # Workaround needed for multi-robot setup: detached mode uses a sleep_until based on update_rate. 
+    # Workaround needed for multi-robot setup: detached mode uses a sleep_until based on update_rate.
     # Until slave/external mode is supported, controller_manager update_rate is increased to minimize sleep
     control_node = Node(
         namespace=ns,
@@ -236,20 +236,24 @@ def launch_setup(context, *args, **kwargs):
 
     controllers = {
         "joint_state_broadcaster": None,
-        "joint_trajectory_controller": get_package_share_directory("kuka_multi_robot_examples") + "/config/joint_trajectory_controller_config.yaml",
-        "event_broadcaster": get_package_share_directory("kuka_multi_robot_examples") + "/config/kuka_event_broadcaster_config.yaml",
+        "joint_trajectory_controller": get_package_share_directory("kuka_multi_robot_examples")
+        + "/config/joint_trajectory_controller_config.yaml",
+        "event_broadcaster": get_package_share_directory("kuka_multi_robot_examples")
+        + "/config/kuka_event_broadcaster_config.yaml",
     }
 
     if use_gpio.perform(context) == "true":
         controllers["gpio_controller"] = gpio_config
 
     if driver_version.perform(context) in {"eki_rsi", "mxa_rsi"}:
-        controllers["control_mode_handler"] = get_package_share_directory(
-            "kuka_multi_robot_examples"
-        ) + "/config/kuka_control_mode_handler_config.yaml"
-        controllers["kss_message_handler"] = get_package_share_directory(
-            "kuka_multi_robot_examples"
-        ) + "/config/kuka_kss_message_handler_config.yaml"
+        controllers["control_mode_handler"] = (
+            get_package_share_directory("kuka_multi_robot_examples")
+            + "/config/kuka_control_mode_handler_config.yaml"
+        )
+        controllers["kss_message_handler"] = (
+            get_package_share_directory("kuka_multi_robot_examples")
+            + "/config/kuka_kss_message_handler_config.yaml"
+        )
 
     controller_spawners = [
         controller_spawner(name, prefix_cmd, param_file)
@@ -277,7 +281,7 @@ def generate_launch_description():
             choices=["rsi_only", "eki_rsi", "mxa_rsi"],
         )
     )
-    
+
     # Robot 1 arguments
     launch_arguments.append(DeclareLaunchArgument("prefix", default_value="robot1_"))
     launch_arguments.append(DeclareLaunchArgument("client_ip", default_value="0.0.0.0"))
@@ -287,7 +291,7 @@ def generate_launch_description():
     launch_arguments.append(
         DeclareLaunchArgument("use_gpio", default_value="false", choices=["true", "false"])
     )
-    
+
     # Robot 2 arguments
     launch_arguments.append(DeclareLaunchArgument("prefix2", default_value="robot2_"))
     launch_arguments.append(DeclareLaunchArgument("client_ip2", default_value="0.0.0.0"))
@@ -297,7 +301,7 @@ def generate_launch_description():
     launch_arguments.append(
         DeclareLaunchArgument("use_gpio2", default_value="false", choices=["true", "false"])
     )
-    
+
     launch_arguments.append(DeclareLaunchArgument("namespace", default_value=""))
     launch_arguments.append(DeclareLaunchArgument("async_thread_priority", default_value="69"))
     launch_arguments.append(DeclareLaunchArgument("async_affinity", default_value="[]"))

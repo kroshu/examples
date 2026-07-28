@@ -31,7 +31,9 @@ def generate_launch_description():
     rviz_config_launch_arg = DeclareLaunchArgument(
         "rviz_config",
         default_value=os.path.join(
-            get_package_share_directory("kuka_multi_robot_examples"), "config", "view_multi_6_axis_urdf.rviz"
+            get_package_share_directory("kuka_multi_robot_examples"),
+            "config",
+            "view_multi_6_axis_urdf.rviz",
         ),
     )
 

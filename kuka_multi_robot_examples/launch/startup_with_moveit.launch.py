@@ -42,7 +42,7 @@ def _remap_config_for_robots(base_cfg: dict, group_name: str = SINGLE_ARM_GROUP)
 
 def _prefix_joint_names(joint_dict: dict) -> tuple[dict, list]:
     """Prefix joint names for all robots and return dict and flat list.
-    
+
     Returns:
         (prefixed_joint_dict, prefixed_joint_names_list)
     """
@@ -101,22 +101,20 @@ def launch_setup(context, *args, **kwargs):
         on_stderr="capture",
     )
 
-    moveit_config_path = (
-        get_package_share_directory("kuka_kr_moveit_config") + "/config"
-    )
+    moveit_config_path = get_package_share_directory("kuka_kr_moveit_config") + "/config"
 
     # Load and remap kinematics configuration
-    with open(moveit_config_path + "/kinematics.yaml", "r") as f:
+    with open(moveit_config_path + "/kinematics.yaml") as f:
         kinematics_config = yaml.safe_load(f)
     kinematics_config = _remap_config_for_robots(kinematics_config)
     robot_description_kinematics = {"robot_description_kinematics": kinematics_config}
 
     # Load MoveIt controllers configuration
-    with open(moveit_config_path + "/moveit_controllers.yaml", "r") as f:
+    with open(moveit_config_path + "/moveit_controllers.yaml") as f:
         moveit_controllers_config = yaml.safe_load(f)
 
     # Load and remap OMPL planning configuration
-    with open(moveit_config_path + "/ompl_planning.yaml", "r") as f:
+    with open(moveit_config_path + "/ompl_planning.yaml") as f:
         ompl_config = yaml.safe_load(f)
     ompl_pipeline_config = dict(ompl_config)
 
@@ -127,24 +125,23 @@ def launch_setup(context, *args, **kwargs):
             group_cfg = dict(base_group_cfg)
             group_cfg["projection_evaluator"] = f"joints({prefix}_joint_1,{prefix}_joint_2)"
             ompl_pipeline_config[f"{prefix}_{SINGLE_ARM_GROUP}"] = group_cfg
-        
+
         # Add dual manipulator group
         dual_cfg = dict(base_group_cfg)
         dual_cfg["projection_evaluator"] = "joints(robot1_joint_1,robot2_joint_1)"
         ompl_pipeline_config["dual_manipulator"] = dual_cfg
 
     # Load Pilz planning configuration
-    with open(moveit_config_path + "/pilz_cartesian_limits.yaml", "r") as f:
+    with open(moveit_config_path + "/pilz_cartesian_limits.yaml") as f:
         pilz_cartesian_limits_config = yaml.safe_load(f)
 
-    with open(moveit_config_path + "/pilz_industrial_motion_planner_planning.yaml", "r") as f:
+    with open(moveit_config_path + "/pilz_industrial_motion_planner_planning.yaml") as f:
         pilz_pipeline_config = yaml.safe_load(f)
 
     # Load and prefix joint limits
     with open(
         get_package_share_directory("kuka_agilus_support")
         + "/config/kr6_r700_2_joint_limits.yaml",
-        "r",
     ) as f:
         base_joint_limits_config = yaml.safe_load(f)
 
@@ -152,7 +149,9 @@ def launch_setup(context, *args, **kwargs):
     prefixed_joint_limits, prefixed_joint_names = _prefix_joint_names(base_joint_limits)
 
     # Update controller configurations with prefixed joint names
-    moveit_controllers_config = _update_controller_joints(moveit_controllers_config, prefixed_joint_names)
+    moveit_controllers_config = _update_controller_joints(
+        moveit_controllers_config, prefixed_joint_names
+    )
 
     # Build planning description
     robot_description_planning = {

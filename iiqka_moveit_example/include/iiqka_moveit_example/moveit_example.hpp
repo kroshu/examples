@@ -36,7 +36,9 @@ public:
   explicit MoveitExample(
     const std::string & node_name = "moveit_example",
     const std::string & planning_group = "manipulator")
-  : rclcpp::Node(node_name), planning_group_(planning_group) {}
+  : rclcpp::Node(node_name), planning_group_(planning_group)
+  {
+  }
 
   void initialize()
   {
@@ -118,8 +120,7 @@ public:
   }
 
   moveit_msgs::msg::RobotTrajectory::SharedPtr planToPosition(
-    const std::vector<double> & joint_pos,
-    const std::string & planning_pipeline = "ompl",
+    const std::vector<double> & joint_pos, const std::string & planning_pipeline = "ompl",
     const std::string & planner_id = "RRTConnectkConfigDefault")
   {
     move_group_interface_->setPlanningPipelineId(planning_pipeline);

@@ -31,16 +31,15 @@ constexpr double kCartesianZOffset = 0.0;
 constexpr double kHalfPi = 1.5707963267948966;
 constexpr std::size_t kRobot1Joint1Index = 0;
 constexpr std::size_t kRobot2Joint1Index = 6;
-constexpr std::array<double, 12> kDualHomeJointPositions = {
-  0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0,
-  0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0};
+constexpr std::array<double, 12> kDualHomeJointPositions = {0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0,
+                                                            0.0, -kHalfPi, kHalfPi, 0.0, 0.0, 0.0};
 
 class DualRobotMoveitExample : public MoveitExample
 {
 public:
-  DualRobotMoveitExample()
-  : MoveitExample("moveit_dual_robot_planning_example", "dual_manipulator")
-  {}
+  DualRobotMoveitExample() : MoveitExample("moveit_dual_robot_planning_example", "dual_manipulator")
+  {
+  }
 
   bool run()
   {
@@ -49,11 +48,13 @@ public:
     move_group->startStateMonitor(2.0);
 
     // Try a coordinated Cartesian request first for both TCPs.
-    if (!planAndExecutePerArmCartesianPath()) {
-        RCLCPP_ERROR(this->get_logger(), "per-arm Cartesian planning/execution failed, aborting");
-        return false;
+    if (!planAndExecutePerArmCartesianPath())
+    {
+      RCLCPP_ERROR(this->get_logger(), "per-arm Cartesian planning/execution failed, aborting");
+      return false;
     }
-    RCLCPP_INFO(this->get_logger(), "per-arm Cartesian step completed, continuing with joint motion");
+    RCLCPP_INFO(
+      this->get_logger(), "per-arm Cartesian step completed, continuing with joint motion");
 
     return planAndExecuteJointMotion();
   }
@@ -61,33 +62,38 @@ public:
 private:
   bool planAndExecuteJointMotion()
   {
-    std::vector<double> joint_goal(
-      kDualHomeJointPositions.begin(), kDualHomeJointPositions.end());
+    std::vector<double> joint_goal(kDualHomeJointPositions.begin(), kDualHomeJointPositions.end());
 
     joint_goal[kRobot1Joint1Index] += -0.15;
     joint_goal[kRobot2Joint1Index] += 0.15;
 
     auto trajectory = planToPosition(joint_goal, "ompl", "RRTConnectkConfigDefault");
-    if (!trajectory) {
+    if (!trajectory)
+    {
       RCLCPP_ERROR(this->get_logger(), "planning failed for group '%s'", planningGroup().c_str());
       return false;
     }
 
-    RCLCPP_INFO(this->get_logger(), "planned dual-arm trajectory with group '%s'", planningGroup().c_str());
+    RCLCPP_INFO(
+      this->get_logger(), "planned dual-arm trajectory with group '%s'", planningGroup().c_str());
 
-    if (!executeTrajectory(*trajectory)) {
+    if (!executeTrajectory(*trajectory))
+    {
       RCLCPP_ERROR(this->get_logger(), "execution failed for group '%s'", planningGroup().c_str());
       return false;
     }
 
-    RCLCPP_INFO(this->get_logger(), "executed dual-arm trajectory with group '%s'", planningGroup().c_str());
+    RCLCPP_INFO(
+      this->get_logger(), "executed dual-arm trajectory with group '%s'", planningGroup().c_str());
     return true;
   }
 
   bool planAndExecutePerArmCartesianPath()
   {
-    moveit::planning_interface::MoveGroupInterface robot1_group(shared_from_this(), "robot1_manipulator");
-    moveit::planning_interface::MoveGroupInterface robot2_group(shared_from_this(), "robot2_manipulator");
+    moveit::planning_interface::MoveGroupInterface robot1_group(
+      shared_from_this(), "robot1_manipulator");
+    moveit::planning_interface::MoveGroupInterface robot2_group(
+      shared_from_this(), "robot2_manipulator");
 
     robot1_group.startStateMonitor(2.0);
     robot2_group.startStateMonitor(2.0);
@@ -125,23 +131,22 @@ private:
     const bool robot1_planned = static_cast<bool>(robot1_group.plan(robot1_plan));
     const bool robot2_planned = static_cast<bool>(robot2_group.plan(robot2_plan));
 
-    if (!robot1_planned || !robot2_planned) {
+    if (!robot1_planned || !robot2_planned)
+    {
       RCLCPP_WARN(
-        this->get_logger(),
-        "Per-arm LIN planning failed (robot1=%s, robot2=%s)",
-        robot1_planned ? "true" : "false",
-        robot2_planned ? "true" : "false");
+        this->get_logger(), "Per-arm LIN planning failed (robot1=%s, robot2=%s)",
+        robot1_planned ? "true" : "false", robot2_planned ? "true" : "false");
       return false;
     }
 
     const auto & jt1 = robot1_plan.trajectory.joint_trajectory;
     const auto & jt2 = robot2_plan.trajectory.joint_trajectory;
-    if (jt1.points.empty() || jt2.points.empty()) {
+    if (jt1.points.empty() || jt2.points.empty())
+    {
       RCLCPP_ERROR(
         this->get_logger(),
         "Per-arm LIN generated empty trajectory (robot1_points=%zu, robot2_points=%zu)",
-        jt1.points.size(),
-        jt2.points.size());
+        jt1.points.size(), jt2.points.size());
       return false;
     }
 
@@ -154,15 +159,12 @@ private:
     combined_jt.header.stamp = jt1.header.stamp;
     combined_jt.joint_names = jt1.joint_names;
     combined_jt.joint_names.insert(
-      combined_jt.joint_names.end(),
-      jt2.joint_names.begin(),
-      jt2.joint_names.end());
+      combined_jt.joint_names.end(), jt2.joint_names.begin(), jt2.joint_names.end());
 
     trajectory_msgs::msg::JointTrajectoryPoint start_point;
     start_point.positions = jt1.points.front().positions;
     start_point.positions.insert(
-      start_point.positions.end(),
-      jt2.points.front().positions.begin(),
+      start_point.positions.end(), jt2.points.front().positions.begin(),
       jt2.points.front().positions.end());
     start_point.velocities.assign(start_point.positions.size(), 0.0);
     start_point.accelerations.assign(start_point.positions.size(), 0.0);
@@ -170,25 +172,27 @@ private:
     trajectory_msgs::msg::JointTrajectoryPoint goal_point;
     goal_point.positions = jt1.points.back().positions;
     goal_point.positions.insert(
-      goal_point.positions.end(),
-      jt2.points.back().positions.begin(),
+      goal_point.positions.end(), jt2.points.back().positions.begin(),
       jt2.points.back().positions.end());
     goal_point.velocities.assign(goal_point.positions.size(), 0.0);
     goal_point.accelerations.assign(goal_point.positions.size(), 0.0);
 
     const auto t1 = jt1.points.back().time_from_start;
     const auto t2 = jt2.points.back().time_from_start;
-    goal_point.time_from_start = (t2.sec > t1.sec || (t2.sec == t1.sec && t2.nanosec > t1.nanosec)) ? t2 : t1;
+    goal_point.time_from_start =
+      (t2.sec > t1.sec || (t2.sec == t1.sec && t2.nanosec > t1.nanosec)) ? t2 : t1;
 
     combined_jt.points.push_back(std::move(start_point));
     combined_jt.points.push_back(std::move(goal_point));
 
-    if (!executeTrajectory(combined_trajectory)) {
+    if (!executeTrajectory(combined_trajectory))
+    {
       RCLCPP_ERROR(this->get_logger(), "Combined Cartesian execution failed");
       return false;
     }
 
-    RCLCPP_INFO(this->get_logger(), "planned and executed synchronized Cartesian trajectory for both robots");
+    RCLCPP_INFO(
+      this->get_logger(), "planned and executed synchronized Cartesian trajectory for both robots");
     return true;
   }
 };
@@ -205,11 +209,14 @@ int main(int argc, char * argv[])
 
   const bool success = node->run();
 
-  if (success) {
+  if (success)
+  {
     RCLCPP_INFO(
       node->get_logger(),
       "Successfully planned and executed one combined trajectory for both robots.");
-  } else {
+  }
+  else
+  {
     RCLCPP_ERROR(node->get_logger(), "Combined dual-robot planning or execution failed.");
   }
 
