@@ -41,11 +41,7 @@ def _remap_config_for_robots(base_cfg: dict, group_name: str = SINGLE_ARM_GROUP)
 
 
 def _prefix_joint_names(joint_dict: dict) -> tuple[dict, list]:
-    """Prefix joint names for all robots and return dict and flat list.
-
-    Returns:
-        (prefixed_joint_dict, prefixed_joint_names_list)
-    """
+    """Prefix joint names for all robots and return dict and flat list."""
     prefixed_joints = {}
     prefixed_names = []
     for joint_name, limits in joint_dict.items():

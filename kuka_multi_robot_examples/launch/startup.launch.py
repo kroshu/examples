@@ -160,11 +160,13 @@ def launch_setup(context, *args, **kwargs):
     driver_config = get_package_share_directory("kuka_rsi_driver") + "/config/driver_config.yaml"
 
     # Build hardware component names from prefix parameters
-    robot1_hw_name = prefix.perform(context) + "kr6_r700_2"
-    robot2_hw_name = prefix2.perform(context) + "kr6_r700_2"
+    hw_names = [
+        prefix.perform(context) + "kr6_r700_2",
+        prefix2.perform(context) + "kr6_r700_2",
+    ]
 
-    # Workaround needed for multi-robot setup: detached mode uses a sleep_until based on update_rate.
-    # Until slave/external mode is supported, controller_manager update_rate is increased to minimize sleep
+    # Workaround: detached mode uses sleep_until based on update_rate. Until
+    # slave/external mode is supported, update_rate is increased to minimize sleep.
     control_node = Node(
         namespace=ns,
         package="kuka_drivers_core",
@@ -177,7 +179,7 @@ def launch_setup(context, *args, **kwargs):
                 "thread_priority": int(rt_prio.perform(context)),
                 "lock_memory": lock_memory.perform(context) == "true",
                 "hardware_components_initial_state": {
-                    "unconfigured": [robot1_hw_name, robot2_hw_name],
+                    "unconfigured": hw_names,
                 },
             },
         ],
@@ -195,7 +197,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[
             driver_config,
             {
-                "robot_models": [robot1_hw_name, robot2_hw_name],
+                "robot_models": hw_names,
                 "use_gpio": use_gpio,
             },
         ],
