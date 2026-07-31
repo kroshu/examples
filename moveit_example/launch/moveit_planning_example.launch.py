@@ -48,7 +48,6 @@ def launch_setup(context, *args, **kwargs):
     moveit_server_args = {"robot_model": robot_model_value}
     if robot_family_value not in ("lbr_iisy", "lbr_iiwa"):
         moveit_server_args["robot_family"] = robot_family_value
-    moveit_server_args["kl_support_package"] = LaunchConfiguration("kl_support_package").perform(context)
 
     moveit_server = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -64,5 +63,4 @@ def generate_launch_description():
     launch_arguments = []
     launch_arguments.append(DeclareLaunchArgument("robot_model", default_value="lbr_iisy3_r760"))
     launch_arguments.append(DeclareLaunchArgument("robot_family", default_value="lbr_iisy"))
-    launch_arguments.append(DeclareLaunchArgument("kl_support_package", default_value="kuka_kl_support"))
     return LaunchDescription(launch_arguments + [OpaqueFunction(function=launch_setup)])
