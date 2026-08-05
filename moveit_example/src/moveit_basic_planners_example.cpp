@@ -1,4 +1,4 @@
-// Copyright 2022 Áron Svastits
+// Copyright 2026 KUKA Hungaria Kft.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 #include <memory>
 
-#include "iiqka_moveit_example/moveit_example.hpp"
+#include "moveit_example/moveit_example.hpp"
 
 int main(int argc, char *argv[]) {
   // Setup
