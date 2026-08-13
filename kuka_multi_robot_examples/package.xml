@@ -15,6 +15,7 @@
   <depend>moveit_ros_planning_interface</depend>
   <depend>rclcpp</depend>
   <depend>iiqka_moveit_example</depend>
+  <exec_depend>kuka_kr_moveit_config</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

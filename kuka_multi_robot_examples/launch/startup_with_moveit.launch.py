@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from launch import LaunchDescription
 from ament_index_python.packages import get_package_share_directory
 from launch.actions.include_launch_description import IncludeLaunchDescription
-from launch.actions import OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.launch_description_sources.python_launch_description_source import (
     PythonLaunchDescriptionSource,
 )
-from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
+from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
@@ -67,15 +69,66 @@ def _update_controller_joints(controllers_cfg: dict, joint_names: list) -> dict:
 
 
 def launch_setup(context, *args, **kwargs):
+    mode = LaunchConfiguration("mode")
+    driver_version = LaunchConfiguration("driver_version")
+    namespace = LaunchConfiguration("namespace")
+    controller_config_dir = LaunchConfiguration("controller_config_dir")
+    event_broadcaster_robot_prefixes = LaunchConfiguration("event_broadcaster_robot_prefixes")
+    rt_core = LaunchConfiguration("rt_core")
+    rt_prio = LaunchConfiguration("rt_prio")
+    non_rt_cores = LaunchConfiguration("non_rt_cores")
+    lock_memory = LaunchConfiguration("lock_memory")
+
+    robot1_model = LaunchConfiguration("robot1_model")
+    robot1_family = LaunchConfiguration("robot1_family")
+    robot1_prefix = LaunchConfiguration("robot1_prefix")
+    robot1_client_ip = LaunchConfiguration("robot1_client_ip")
+    robot1_client_port = LaunchConfiguration("robot1_client_port")
+    robot1_mxa_client_port = LaunchConfiguration("robot1_mxa_client_port")
+    robot1_controller_ip = LaunchConfiguration("robot1_controller_ip")
+
+    robot2_model = LaunchConfiguration("robot2_model")
+    robot2_family = LaunchConfiguration("robot2_family")
+    robot2_prefix = LaunchConfiguration("robot2_prefix")
+    robot2_client_ip = LaunchConfiguration("robot2_client_ip")
+    robot2_client_port = LaunchConfiguration("robot2_client_port")
+    robot2_mxa_client_port = LaunchConfiguration("robot2_mxa_client_port")
+    robot2_controller_ip = LaunchConfiguration("robot2_controller_ip")
+
     rviz_config_file = (
         get_package_share_directory("kuka_resources") + "/config/planning_6_axis.rviz"
     )
 
-    # Include the multi-robot startup launch
+    # Include the dual-arm driver startup launch
     startup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [get_package_share_directory("kuka_multi_robot_examples"), "/launch/startup.launch.py"]
+            [get_package_share_directory("kuka_rsi_driver"), "/launch/dual_arm_startup.launch.py"]
         ),
+        launch_arguments=[
+            ("mode", mode),
+            ("driver_version", driver_version),
+            ("namespace", namespace),
+            ("controller_config_dir", controller_config_dir),
+            ("event_broadcaster_robot_prefixes", event_broadcaster_robot_prefixes),
+            ("rt_core", rt_core),
+            ("rt_prio", rt_prio),
+            ("non_rt_cores", non_rt_cores),
+            ("lock_memory", lock_memory),
+            ("robot1_model", robot1_model),
+            ("robot1_family", robot1_family),
+            ("robot1_prefix", robot1_prefix),
+            ("robot1_client_ip", robot1_client_ip),
+            ("robot1_client_port", robot1_client_port),
+            ("robot1_mxa_client_port", robot1_mxa_client_port),
+            ("robot1_controller_ip", robot1_controller_ip),
+            ("robot2_model", robot2_model),
+            ("robot2_family", robot2_family),
+            ("robot2_prefix", robot2_prefix),
+            ("robot2_client_ip", robot2_client_ip),
+            ("robot2_client_port", robot2_client_port),
+            ("robot2_mxa_client_port", robot2_mxa_client_port),
+            ("robot2_controller_ip", robot2_controller_ip),
+        ],
     )
 
     # Manual MoveIt configuration for multi-robot KR setup.
@@ -112,9 +165,12 @@ def launch_setup(context, *args, **kwargs):
     # Load and remap OMPL planning configuration
     with open(moveit_config_path + "/ompl_planning.yaml") as f:
         ompl_config = yaml.safe_load(f)
-    ompl_pipeline_config = {}
+    ompl_pipeline_config = {
+        key: value for key, value in ompl_config.items() if key != SINGLE_ARM_GROUP
+    }
 
-    # Remap OMPL groups for multi-robot and add projection evaluators
+    # Remap OMPL groups for multi-robot and add projection evaluators.
+    # Keep base OMPL pipeline keys (e.g., planning_plugins) intact.
     base_group_cfg = ompl_config.get(SINGLE_ARM_GROUP, {})
     if base_group_cfg:
         for prefix in ROBOT_PREFIXES:
@@ -135,11 +191,16 @@ def launch_setup(context, *args, **kwargs):
     with open(moveit_config_path + "/pilz_industrial_motion_planner_planning.yaml") as f:
         pilz_pipeline_config = yaml.safe_load(f)
 
-    # Load and prefix joint limits
-    with open(
-        get_package_share_directory("kuka_agilus_support")
-        + "/config/kr6_r700_2_joint_limits.yaml",
-    ) as f:
+    # Load and prefix joint limits based on robot1 family/model.
+    robot1_family_value = robot1_family.perform(context)
+    robot1_model_value = robot1_model.perform(context)
+    robot1_support_package = f"kuka_{robot1_family_value}_support"
+    joint_limits_file = os.path.join(
+        get_package_share_directory(robot1_support_package),
+        "config",
+        f"{robot1_model_value}_joint_limits.yaml",
+    )
+    with open(joint_limits_file) as f:
         base_joint_limits_config = yaml.safe_load(f)
 
     base_joint_limits = base_joint_limits_config.get("joint_limits", {})
@@ -195,4 +256,45 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    return LaunchDescription([OpaqueFunction(function=launch_setup)])
+    launch_arguments = []
+
+    launch_arguments.append(DeclareLaunchArgument("mode", default_value="mock"))
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "driver_version",
+            default_value="rsi_only",
+            choices=["rsi_only", "eki_rsi", "mxa_rsi"],
+        )
+    )
+    launch_arguments.append(DeclareLaunchArgument("namespace", default_value=""))
+    launch_arguments.append(
+        DeclareLaunchArgument(
+            "controller_config_dir",
+            default_value=get_package_share_directory("kuka_rsi_driver") + "/config",
+        )
+    )
+    launch_arguments.append(
+        DeclareLaunchArgument("event_broadcaster_robot_prefixes", default_value="robot1,robot2")
+    )
+    launch_arguments.append(DeclareLaunchArgument("rt_core", default_value="-1"))
+    launch_arguments.append(DeclareLaunchArgument("rt_prio", default_value="70"))
+    launch_arguments.append(DeclareLaunchArgument("non_rt_cores", default_value=""))
+    launch_arguments.append(DeclareLaunchArgument("lock_memory", default_value="true"))
+
+    launch_arguments.append(DeclareLaunchArgument("robot1_model", default_value="kr6_r700_sixx"))
+    launch_arguments.append(DeclareLaunchArgument("robot1_family", default_value="agilus"))
+    launch_arguments.append(DeclareLaunchArgument("robot1_prefix", default_value="robot1_"))
+    launch_arguments.append(DeclareLaunchArgument("robot1_client_ip", default_value="0.0.0.0"))
+    launch_arguments.append(DeclareLaunchArgument("robot1_client_port", default_value="59152"))
+    launch_arguments.append(DeclareLaunchArgument("robot1_mxa_client_port", default_value="1337"))
+    launch_arguments.append(DeclareLaunchArgument("robot1_controller_ip", default_value="0.0.0.0"))
+
+    launch_arguments.append(DeclareLaunchArgument("robot2_model", default_value="kr6_r700_sixx"))
+    launch_arguments.append(DeclareLaunchArgument("robot2_family", default_value="agilus"))
+    launch_arguments.append(DeclareLaunchArgument("robot2_prefix", default_value="robot2_"))
+    launch_arguments.append(DeclareLaunchArgument("robot2_client_ip", default_value="0.0.0.0"))
+    launch_arguments.append(DeclareLaunchArgument("robot2_client_port", default_value="59153"))
+    launch_arguments.append(DeclareLaunchArgument("robot2_mxa_client_port", default_value="1338"))
+    launch_arguments.append(DeclareLaunchArgument("robot2_controller_ip", default_value="0.0.0.0"))
+
+    return LaunchDescription(launch_arguments + [OpaqueFunction(function=launch_setup)])
