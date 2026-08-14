@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "geometry_msgs/msg/pose.hpp"
-#include "iiqka_moveit_example/moveit_example.hpp"
+#include "moveit_example/moveit_example.hpp"
 #include "rclcpp/executors/multi_threaded_executor.hpp"
 #include "rclcpp/rclcpp.hpp"
 
