@@ -4,7 +4,7 @@ This repository contains examples of how the KUKA drivers can be integrated into
 
 ## iiQKA MoveIt Example
 
-The `iiqka_moveit_example` package demonstrates integration of the KUKA iiQKA driver with MoveIt 2 for motion planning and manipulation tasks.
+The `moveit_example` package demonstrates integration of the KUKA iiQKA driver with MoveIt 2 for motion planning and manipulation tasks.
 
 **Features:**
 - Motion planning using MoveIt 2's planning algorithms (RRT, PRM, etc.)
@@ -15,7 +15,7 @@ The `iiqka_moveit_example` package demonstrates integration of the KUKA iiQKA dr
 
 **Startup:**
 ```bash
-ros2 launch iiqka_moveit_example moveit_planning_example.launch.py
+ros2 launch moveit_example moveit_planning_example.launch.py
 ```
 
 ## Multi-Robot Support
