@@ -364,4 +364,4 @@ protected:
   const std::string planning_group_;
 };
 
-#endif // MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
+#endif  // MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
