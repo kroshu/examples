@@ -20,57 +20,41 @@ ros2 launch moveit_example moveit_planning_example.launch.py
 
 ## Multi-Robot Support
 
-The `kuka_multi_robot_examples` package demonstrates running multiple KUKA robots (both iiQKA and industrial) within a single ROS 2 control node using asynchronous hardware interfaces.
+The `kuka_multi_robot_examples` package demonstrates planning with multiple KUKA robots (both iiQKA and industrial) within a single ROS 2 control node using asynchronous hardware interfaces using MoveIt.
 
-**Key Features:**
-- Multiple robots in one `controller_manager` (ROS 2 Jazzy+)
-- Asynchronous hardware interfaces running in separate execution contexts
-- Independent robot prefixes and namespaces
-- Configurable async thread priority and CPU affinity for real-time optimization
-- Both synchronous and asynchronous robots can run together (robot1 async, robot2 sync by default)
 
-**Architecture:**
-- Single combined URDF with both robot models
-- Unified robot description and controller configuration
-- Synchronized lifecycle interface for safe multi-robot startup
-
-**Launch files:**
-- `startup.launch.py`: Core multi-robot launcher (all features, configurable)
-- `startup_with_rviz.launch.py`: Startup with RViz visualization
+**Launch file:**
 - `startup_with_moveit.launch.py`: Startup with MoveIt 2 motion planning
     - MoveitConfigsBuilder cannot be used here, therefore all configurations have to be loaded manually. The launch files only loads ompl and pilz planning configurations.
 
 **Available launch arguments:**
 
 *Mode & Driver Configuration:*
-- `mode` (default: `hardware`): `mock`, `hardware`, or `gazebo`
+- `mode` (default: `mock`): `mock`, `hardware`, or `gazebo`
 - `driver_version` (default: `rsi_only`): `rsi_only`, `eki_rsi`, or `mxa_rsi`
-- `controller_config` (default: empty): Custom controller configuration file
+- `controller_config_dir` (default: `kuka_rsi_driver/config`): Controller configuration directory
+- `event_broadcaster_robot_prefixes` (default: `robot1,robot2`): Prefixes used by event broadcasters
 
 *Robot 1:*
-- `prefix` (default: `robot1_`): Namespace prefix for robot1 resources
-- `client_ip` (default: `0.0.0.0`): Client IP address for communication
-- `client_port` (default: `59152`): RSI communication port
-- `mxa_client_port` (default: `1337`): MXA communication port
-- `controller_ip` (default: `0.0.0.0`): Robot controller IP
-- `use_gpio` (default: `false`): Enable GPIO I/O support
+- `robot1_model` (default: `kr6_r700_sixx`): Robot model name
+- `robot1_family` (default: `agilus`): Robot family name
+- `robot1_prefix` (default: `robot1_`): Namespace prefix for robot1 resources
+- `robot1_client_ip` (default: `0.0.0.0`): Client IP address for communication
+- `robot1_client_port` (default: `59152`): RSI communication port
+- `robot1_mxa_client_port` (default: `1337`): MXA communication port
+- `robot1_controller_ip` (default: `0.0.0.0`): Robot controller IP
 
 *Robot 2:*
-- `prefix2` (default: `robot2_`): Namespace prefix for robot2 resources
-- `client_ip2` (default: `0.0.0.0`): Client IP address for communication
-- `client_port2` (default: `59152`): RSI communication port
-- `mxa_client_port2` (default: `1337`): MXA communication port
-- `controller_ip2` (default: `0.0.0.0`): Robot controller IP
-- `use_gpio2` (default: `false`): Enable GPIO I/O support
-
-*Async Hardware Interface (Real-Time Optimization):*
-- `async_thread_priority` (default: `69`): Priority for async hardware thread (0-99, higher = more priority)
-- `async_affinity` (default: `[]`): CPU core pinning for async thread, e.g. `"[2,4]"` or `"[2]"` (empty `[]` = any core)
-- `roundtrip_time` (default: `4000`): Microseconds for RSI communication roundtrip (mock hardware only)
+- `robot2_model` (default: `kr6_r700_sixx`): Robot model name
+- `robot2_family` (default: `agilus`): Robot family name
+- `robot2_prefix` (default: `robot2_`): Namespace prefix for robot2 resources
+- `robot2_client_ip` (default: `0.0.0.0`): Client IP address for communication
+- `robot2_client_port` (default: `59153`): RSI communication port
+- `robot2_mxa_client_port` (default: `1338`): MXA communication port
+- `robot2_controller_ip` (default: `0.0.0.0`): Robot controller IP
 
 *System & Real-Time Configuration:*
 - `namespace` (default: empty): ROS 2 namespace for all nodes
-- `verify_robot_model` (default: `true`): Verify robot URDF model validity
 - `rt_core` (default: `-1`): CPU core for real-time control loop pinning (-1 = no pinning)
 - `rt_prio` (default: `70`): Priority level for control loop thread
 - `non_rt_cores` (default: empty): Comma-separated CPU cores for non-RT threads, e.g. `"2,3,4"`
