@@ -33,7 +33,6 @@ The `kuka_multi_robot_examples` package demonstrates planning with multiple KUKA
 - `mode` (default: `mock`): `mock`, `hardware`, or `gazebo`
 - `driver_version` (default: `rsi_only`): `rsi_only`, `eki_rsi`, or `mxa_rsi`
 - `controller_config_dir` (default: `kuka_rsi_driver/config`): Controller configuration directory
-- `event_broadcaster_robot_prefixes` (default: `robot1,robot2`): Prefixes used by event broadcasters
 
 *Robot 1:*
 - `robot1_model` (default: `kr6_r700_sixx`): Robot model name

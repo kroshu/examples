@@ -73,7 +73,6 @@ def launch_setup(context, *args, **kwargs):
     driver_version = LaunchConfiguration("driver_version")
     namespace = LaunchConfiguration("namespace")
     controller_config_dir = LaunchConfiguration("controller_config_dir")
-    event_broadcaster_robot_prefixes = LaunchConfiguration("event_broadcaster_robot_prefixes")
     rt_core = LaunchConfiguration("rt_core")
     rt_prio = LaunchConfiguration("rt_prio")
     non_rt_cores = LaunchConfiguration("non_rt_cores")
@@ -109,7 +108,6 @@ def launch_setup(context, *args, **kwargs):
             ("driver_version", driver_version),
             ("namespace", namespace),
             ("controller_config_dir", controller_config_dir),
-            ("event_broadcaster_robot_prefixes", event_broadcaster_robot_prefixes),
             ("rt_core", rt_core),
             ("rt_prio", rt_prio),
             ("non_rt_cores", non_rt_cores),
@@ -272,9 +270,6 @@ def generate_launch_description():
             "controller_config_dir",
             default_value=get_package_share_directory("kuka_rsi_driver") + "/config",
         )
-    )
-    launch_arguments.append(
-        DeclareLaunchArgument("event_broadcaster_robot_prefixes", default_value="robot1,robot2")
     )
     launch_arguments.append(DeclareLaunchArgument("rt_core", default_value="-1"))
     launch_arguments.append(DeclareLaunchArgument("rt_prio", default_value="70"))
