@@ -17,10 +17,12 @@
 
 #include <math.h>
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 #include "moveit/move_group_interface/move_group_interface.hpp"
 #include "moveit/planning_scene_interface/planning_scene_interface.hpp"
@@ -30,12 +32,14 @@
 
 class MoveitExample : public rclcpp::Node {
 public:
-  MoveitExample() : rclcpp::Node("moveit_example") {}
+  explicit MoveitExample(const std::string &node_name = "moveit_example",
+                         const std::string &planning_group = "manipulator")
+      : rclcpp::Node(node_name), planning_group_(planning_group) {}
 
   void initialize() {
     move_group_interface_ =
         std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-            shared_from_this(), PLANNING_GROUP);
+            shared_from_this(), planning_group_);
 
     moveit_visual_tools_ =
         std::make_shared<moveit_visual_tools::MoveItVisualTools>(
@@ -108,7 +112,11 @@ public:
   }
 
   moveit_msgs::msg::RobotTrajectory::SharedPtr
-  planToPosition(const std::vector<double> &joint_pos) {
+  planToPosition(const std::vector<double> &joint_pos,
+                 const std::string &planning_pipeline = "ompl",
+                 const std::string &planner_id = "RRTConnectkConfigDefault") {
+    move_group_interface_->setPlanningPipelineId(planning_pipeline);
+    move_group_interface_->setPlannerId(planner_id);
     move_group_interface_->setJointValueTarget(joint_pos);
 
     moveit::planning_interface::MoveGroupInterface::Plan plan;
@@ -121,6 +129,10 @@ public:
       return std::make_shared<moveit_msgs::msg::RobotTrajectory>(
           plan.trajectory);
     }
+  }
+
+  bool executeTrajectory(const moveit_msgs::msg::RobotTrajectory &trajectory) {
+    return static_cast<bool>(move_group_interface_->execute(trajectory));
   }
 
   moveit_msgs::msg::RobotTrajectory::SharedPtr planToPointUntilSuccess(
@@ -304,7 +316,7 @@ public:
     moveit_visual_tools_->deleteAllMarkers();
     moveit_visual_tools_->publishTrajectoryLine(
         trajectory, moveit_visual_tools_->getRobotModel()->getJointModelGroup(
-                        PLANNING_GROUP));
+                        planning_group_));
   }
 
   void drawTitle(const std::string &text) {
@@ -328,6 +340,8 @@ public:
     return move_group_interface_;
   }
 
+  const std::string &planningGroup() const { return planning_group_; }
+
 protected:
   std::shared_ptr<moveit::planning_interface::MoveGroupInterface>
       move_group_interface_;
@@ -335,7 +349,7 @@ protected:
       planning_scene_diff_publisher_;
   std::shared_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
   const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_basic_plan");
-  const std::string PLANNING_GROUP = "manipulator";
+  const std::string planning_group_;
 };
 
 #endif // MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
