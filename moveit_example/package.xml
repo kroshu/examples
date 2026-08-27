@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>iiqka_moveit_example</name>
+  <name>moveit_example</name>
   <version>1.0.0</version>
   <description>ROS example package using the iiQKA driver and moveit</description>
   <maintainer email="svastits1@gmail.com">Aron Svastits</maintainer>

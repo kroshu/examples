@@ -1,4 +1,4 @@
-# Copyright 2022 Márk Szitanics
+# Copyright 2026 KUKA Hungaria Kft.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     position_goals = PathJoinSubstitution(
         [
-            FindPackageShare("iiqka_moveit_example"),
+            FindPackageShare("moveit_example"),
             "config",
             "dummy_publisher.yaml",
         ]

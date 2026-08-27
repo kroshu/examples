@@ -1,4 +1,4 @@
-// Copyright 2022 Áron Svastits
+// Copyright 2026 KUKA Hungaria Kft.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef IIQKA_MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
-#define IIQKA_MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
+#ifndef MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
+#define MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
 
 #include <math.h>
 
@@ -339,4 +339,4 @@ protected:
   const std::string PLANNING_GROUP = "manipulator";
 };
 
-#endif // IIQKA_MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_
+#endif // MOVEIT_EXAMPLE__MOVEIT_EXAMPLE_HPP_

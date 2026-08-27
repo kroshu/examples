@@ -1,4 +1,4 @@
-// Copyright 2022 Áron Svastits
+// Copyright 2026 KUKA Hungaria Kft.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #include <math.h>
 #include <memory>
 
-#include "iiqka_moveit_example/moveit_example.hpp"
+#include "moveit_example/moveit_example.hpp"
 
 int main(int argc, char *argv[]) {
   // Setup
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 
   // Go to correct position for the example
   auto init_trajectory = example_node->planToPosition(
-      std::vector<double>{0.0017, -2.096, 1.514, 0.0012, -0.9888, -0.0029});
+      std::vector<double>{0.3587, 0.3055, -1.3867, 0.0, -0.4896, -0.3587});
   if (init_trajectory != nullptr) {
     example_node->moveGroupInterface()->execute(*init_trajectory);
   }
@@ -45,21 +45,12 @@ int main(int argc, char *argv[]) {
       geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.1).y(1.0).z(0.1));
   example_node->addBreakPoint();
 
-  auto cart_goal = Eigen::Isometry3d(Eigen::Translation3d(0.4, -0.15, 0.55) *
-                                     Eigen::Quaterniond::Identity());
+  auto standing_pose = Eigen::Isometry3d(Eigen::Translation3d(0.1, 0, 0.8) *
+                                         Eigen::Quaterniond::Identity());
 
-  geometry_msgs::msg::Quaternion q;
-  q.x = 0;
-  q.y = 0;
-  q.z = 0;
-  q.w = 1;
-
-  example_node->moveGroupInterface()->setPlanningTime(30.0);
-
-  example_node->setOrientationConstraint(q);
   // Plan with collision avoidance
-  auto planned_trajectory = example_node->planToPointUntilSuccess(
-      cart_goal, "ompl", "RRTkConfigDefault");
+  auto planned_trajectory = example_node->planToPoint(
+      standing_pose, "ompl", "RRTConnectkConfigDefault");
   if (planned_trajectory != nullptr) {
     example_node->drawTrajectory(*planned_trajectory);
     example_node->addBreakPoint();
