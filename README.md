@@ -2,9 +2,9 @@
 
 This repository contains examples of how the KUKA drivers can be integrated into the ROS 2 ecosystem for more complex applications needing path planning, I/O-s, additional tools or external axes. For more information on how the KUKA drivers work, visit the [`kuka_drivers` Wiki](https://github.com/kroshu/kuka_drivers/wiki).
 
-## iiQKA MoveIt Example
+## MoveIt Example
 
-The `moveit_example` package demonstrates integration of the KUKA iiQKA driver with MoveIt 2 for motion planning and manipulation tasks.
+The `moveit_example` package demonstrates integration of the KUKA drivers with MoveIt 2 for motion planning and manipulation tasks.
 
 **Features:**
 - Motion planning using MoveIt 2's planning algorithms (RRT, PRM, etc.)
@@ -17,6 +17,45 @@ The `moveit_example` package demonstrates integration of the KUKA iiQKA driver w
 ```bash
 ros2 launch moveit_example moveit_planning_example.launch.py
 ```
+
+## MoveIt Task Constructor Example
+
+The `moveit_task_constructor_example` package demonstrates a depalletizing task using the MoveIt Task Constructor with KUKA LBR iisy robots.
+
+**Features:**
+- Plans and executes a complete pick-and-place task for each object in a 2x2x2 pallet arrangement
+- Replans from the updated planning scene after each object is placed
+- Uses OMPL, joint interpolation, and Cartesian path planners
+- Visualizes the planning scene and task solutions in RViz
+
+**Startup:**
+```bash
+ros2 launch moveit_task_constructor_example startup_with_rviz.launch.py
+ros2 lifecycle set robot_manager configure
+ros2 lifecycle set robot_manager activate
+```
+
+To run without RViz:
+```bash
+ros2 launch moveit_task_constructor_example startup.launch.py
+ros2 lifecycle set robot_manager configure
+ros2 lifecycle set robot_manager activate
+```
+
+**Available launch arguments:**
+- `robot_model` (default: `lbr_iisy3_r760`): Robot model name
+- `robot_family` (default: `lbr_iisy`): Robot family; use an RSI-based industrial family such as `agilus` with its matching model
+- `namespace` (default: empty): ROS 2 namespace for all nodes
+- `x`, `y`, `z` (default: `0`): Position of `base_link` relative to `world` in meters
+- `roll`, `pitch`, `yaw` (default: `0`): Orientation of `base_link` relative to `world` in radians
+
+For example, to use a KR Agilus robot:
+```bash
+ros2 launch moveit_task_constructor_example startup_with_rviz.launch.py \
+    robot_family:=agilus robot_model:=kr6_r700_sixx
+```
+
+Sunrise LBR iiwa robots are not supported by this example.
 
 ## Multi-Robot Support
 
