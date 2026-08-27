@@ -358,8 +358,7 @@ int main(int argc, char ** argv)
         for (int i = 0; i < 2 && rclcpp::ok() && completed_successfully; ++i)
         {
           bool object_completed = false;
-          for (int attempt = 1;
-               attempt <= kMaxTaskAttempts && rclcpp::ok() && !object_completed;
+          for (int attempt = 1; attempt <= kMaxTaskAttempts && rclcpp::ok() && !object_completed;
                ++attempt)
           {
             auto task = mtc_depalletizing_task_node->createTask(i, j, k);
