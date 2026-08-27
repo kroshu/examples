@@ -40,8 +40,8 @@ bool MTCDepalletizingTaskNode::waitForRobotManager()
 {
   using namespace std::chrono_literals;
 
-  const auto client = node_->create_client<lifecycle_msgs::srv::GetState>(
-    "robot_manager/get_state");
+  const auto client =
+    node_->create_client<lifecycle_msgs::srv::GetState>("robot_manager/get_state");
   const auto request = std::make_shared<lifecycle_msgs::srv::GetState::Request>();
 
   while (rclcpp::ok())
@@ -186,36 +186,35 @@ mtc::Task MTCDepalletizingTaskNode::createTask(int i, int j, int k)
   // Define Approach Stage
   auto approach_stage = std::make_unique<mtc::stages::MoveTo>(
     "approach_" + std::to_string(object_index), sampling_planner);
-        approach_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        approach_stage->properties().set(
-          "marker_ns", "approach_" + std::to_string(object_index));
-        geometry_msgs::msg::PoseStamped approach_pose;
-        approach_pose.header.frame_id = "world";
-        approach_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
-        approach_pose.pose.position.y = -0.1 + PALLET_DISTANCE * j;
-        approach_pose.pose.position.z = 0.4;
-        approach_pose.pose.orientation.x = 0.0;
-        approach_pose.pose.orientation.y = 1.0;
-        approach_pose.pose.orientation.z = 0.0;
-        approach_pose.pose.orientation.w = 0.0;
-        approach_stage->setGoal(approach_pose);
+  approach_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
+  approach_stage->properties().set("marker_ns", "approach_" + std::to_string(object_index));
+  geometry_msgs::msg::PoseStamped approach_pose;
+  approach_pose.header.frame_id = "world";
+  approach_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
+  approach_pose.pose.position.y = -0.1 + PALLET_DISTANCE * j;
+  approach_pose.pose.position.z = 0.4;
+  approach_pose.pose.orientation.x = 0.0;
+  approach_pose.pose.orientation.y = 1.0;
+  approach_pose.pose.orientation.z = 0.0;
+  approach_pose.pose.orientation.w = 0.0;
+  approach_stage->setGoal(approach_pose);
   task.add(std::move(approach_stage));
 
   // Define Pick Stage
   auto pick_stage = std::make_unique<mtc::stages::MoveTo>(
     "pick_" + std::to_string(object_index), cartesian_planner);
-        pick_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        pick_stage->properties().set("marker_ns", "pick_" + std::to_string(object_index));
-        geometry_msgs::msg::PoseStamped pick_pose;
-        pick_pose.header.frame_id = "world";
-        pick_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
-        pick_pose.pose.position.y = -0.1 + PALLET_DISTANCE * j;
-        pick_pose.pose.position.z = 0.4 - PALLET_DISTANCE * (k + 1) - 0.02;
-        pick_pose.pose.orientation.x = 0.0;
-        pick_pose.pose.orientation.y = 1.0;
-        pick_pose.pose.orientation.z = 0.0;
-        pick_pose.pose.orientation.w = 0.0;
-        pick_stage->setGoal(pick_pose);
+  pick_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
+  pick_stage->properties().set("marker_ns", "pick_" + std::to_string(object_index));
+  geometry_msgs::msg::PoseStamped pick_pose;
+  pick_pose.header.frame_id = "world";
+  pick_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
+  pick_pose.pose.position.y = -0.1 + PALLET_DISTANCE * j;
+  pick_pose.pose.position.z = 0.4 - PALLET_DISTANCE * (k + 1) - 0.02;
+  pick_pose.pose.orientation.x = 0.0;
+  pick_pose.pose.orientation.y = 1.0;
+  pick_pose.pose.orientation.z = 0.0;
+  pick_pose.pose.orientation.w = 0.0;
+  pick_stage->setGoal(pick_pose);
   task.add(std::move(pick_stage));
 
   // Attach Object Stage
@@ -227,48 +226,48 @@ mtc::Task MTCDepalletizingTaskNode::createTask(int i, int j, int k)
   // Define Lift Stage
   auto lift_stage = std::make_unique<mtc::stages::MoveTo>(
     "lift_" + std::to_string(object_index), cartesian_planner);
-        lift_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        lift_stage->properties().set("marker_ns", "lift_" + std::to_string(object_index));
-        geometry_msgs::msg::PoseStamped lift_pose;
-        lift_pose.header.frame_id = "world";
-        lift_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
-        lift_pose.pose.position.y = -0.1 + PALLET_DISTANCE * j;
-        lift_pose.pose.position.z = 0.4;
-        lift_pose.pose.orientation.x = 0.0;
-        lift_pose.pose.orientation.y = 1.0;
-        lift_pose.pose.orientation.z = 0.0;
-        lift_pose.pose.orientation.w = 0.0;
-        lift_stage->setGoal(lift_pose);
+  lift_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
+  lift_stage->properties().set("marker_ns", "lift_" + std::to_string(object_index));
+  geometry_msgs::msg::PoseStamped lift_pose;
+  lift_pose.header.frame_id = "world";
+  lift_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
+  lift_pose.pose.position.y = -0.1 + PALLET_DISTANCE * j;
+  lift_pose.pose.position.z = 0.4;
+  lift_pose.pose.orientation.x = 0.0;
+  lift_pose.pose.orientation.y = 1.0;
+  lift_pose.pose.orientation.z = 0.0;
+  lift_pose.pose.orientation.w = 0.0;
+  lift_stage->setGoal(lift_pose);
   task.add(std::move(lift_stage));
 
   // Define Move Stage
-  auto move_stage = std::make_unique<mtc::stages::MoveTo>(
-    "move_" + std::to_string(object_index), sampling_planner);
-        move_stage->setTimeout(10.0);
-        move_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        move_stage->properties().set("marker_ns", "move_" + std::to_string(object_index));
-        geometry_msgs::msg::PoseStamped move_pose;
-        move_pose.header.frame_id = "world";
-        move_pose.pose.position.x = -0.3 - PALLET_DISTANCE * i;
-        move_pose.pose.position.y = 0.1 - PALLET_DISTANCE * j;
-        move_pose.pose.position.z = 0.4;
-        move_pose.pose.orientation.x = 1.0;
-        move_pose.pose.orientation.y = 0.0;
-        move_pose.pose.orientation.z = 0.0;
-        move_pose.pose.orientation.w = 0.0;
-        move_stage->setGoal(move_pose);
+  auto move_stage =
+    std::make_unique<mtc::stages::MoveTo>("move_" + std::to_string(object_index), sampling_planner);
+  move_stage->setTimeout(10.0);
+  move_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
+  move_stage->properties().set("marker_ns", "move_" + std::to_string(object_index));
+  geometry_msgs::msg::PoseStamped move_pose;
+  move_pose.header.frame_id = "world";
+  move_pose.pose.position.x = -0.3 - PALLET_DISTANCE * i;
+  move_pose.pose.position.y = 0.1 - PALLET_DISTANCE * j;
+  move_pose.pose.position.z = 0.4;
+  move_pose.pose.orientation.x = 1.0;
+  move_pose.pose.orientation.y = 0.0;
+  move_pose.pose.orientation.z = 0.0;
+  move_pose.pose.orientation.w = 0.0;
+  move_stage->setGoal(move_pose);
   task.add(std::move(move_stage));
 
   // Define Place Stage
   auto place_stage = std::make_unique<mtc::stages::MoveRelative>(
     "place_" + std::to_string(object_index), cartesian_planner);
-        place_stage->properties().set("marker_ns", "place_" + std::to_string(object_index));
-        place_stage->properties().set("link", eef_frame);
-        place_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        geometry_msgs::msg::Vector3Stamped vec_place;
-        vec_place.header.frame_id = "world";
-        vec_place.vector.z = -(2 - k) * PALLET_DISTANCE - 0.02;
-        place_stage->setDirection(vec_place);
+  place_stage->properties().set("marker_ns", "place_" + std::to_string(object_index));
+  place_stage->properties().set("link", eef_frame);
+  place_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
+  geometry_msgs::msg::Vector3Stamped vec_place;
+  vec_place.header.frame_id = "world";
+  vec_place.vector.z = -(2 - k) * PALLET_DISTANCE - 0.02;
+  place_stage->setDirection(vec_place);
   task.add(std::move(place_stage));
 
   // Detach Object Stage
@@ -280,13 +279,13 @@ mtc::Task MTCDepalletizingTaskNode::createTask(int i, int j, int k)
   // Define Lift2 Stage
   auto lift2_stage = std::make_unique<mtc::stages::MoveRelative>(
     "lift2_" + std::to_string(object_index), cartesian_planner);
-        lift2_stage->properties().set("marker_ns", "lift2_" + std::to_string(object_index));
-        lift2_stage->properties().set("link", eef_frame);
-        lift2_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        geometry_msgs::msg::Vector3Stamped vec_lift2;
-        vec_lift2.header.frame_id = "world";
-        vec_lift2.vector.z = (2 - k) * PALLET_DISTANCE + 0.02;
-        lift2_stage->setDirection(vec_lift2);
+  lift2_stage->properties().set("marker_ns", "lift2_" + std::to_string(object_index));
+  lift2_stage->properties().set("link", eef_frame);
+  lift2_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
+  geometry_msgs::msg::Vector3Stamped vec_lift2;
+  vec_lift2.header.frame_id = "world";
+  vec_lift2.vector.z = (2 - k) * PALLET_DISTANCE + 0.02;
+  lift2_stage->setDirection(vec_lift2);
   task.add(std::move(lift2_stage));
 
   return task;

@@ -74,7 +74,8 @@ def launch_setup(context, *args, **kwargs):
             + f"/urdf/{robot_model_value}.srdf"
         )
         .robot_description_kinematics(
-            file_path=get_package_share_directory(moveit_config_package) + "/config/kinematics.yaml"
+            file_path=get_package_share_directory(moveit_config_package)
+            + "/config/kinematics.yaml"
         )
         .trajectory_execution(
             file_path=get_package_share_directory(moveit_config_package)

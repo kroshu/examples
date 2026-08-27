@@ -27,7 +27,10 @@ def generate_launch_description():
 
     startup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [get_package_share_directory("moveit_task_constructor_example"), "/launch/startup.launch.py"]
+            [
+                get_package_share_directory("moveit_task_constructor_example"),
+                "/launch/startup.launch.py",
+            ]
         )
     )
 
