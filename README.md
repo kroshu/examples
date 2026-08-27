@@ -31,11 +31,15 @@ The `moveit_task_constructor_example` package demonstrates a depalletizing task 
 **Startup:**
 ```bash
 ros2 launch moveit_task_constructor_example startup_with_rviz.launch.py
+ros2 lifecycle set robot_manager configure
+ros2 lifecycle set robot_manager activate
 ```
 
 To run without RViz:
 ```bash
 ros2 launch moveit_task_constructor_example startup.launch.py
+ros2 lifecycle set robot_manager configure
+ros2 lifecycle set robot_manager activate
 ```
 
 **Available launch arguments:**

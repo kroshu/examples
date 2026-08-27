@@ -54,17 +54,18 @@ bool MTCDepalletizingTaskNode::waitForRobotManager()
       continue;
     }
 
-    auto future = client->async_send_request(request).future;
-    const auto result = future.wait_for(1s);
+    auto request_future = client->async_send_request(request);
+    const auto result = request_future.future.wait_for(1s);
     if (result != std::future_status::ready)
     {
+      client->remove_pending_request(request_future);
       RCLCPP_WARN_THROTTLE(
         node_->get_logger(), *node_->get_clock(), 5000,
         "Timed out while querying robot_manager lifecycle state");
       continue;
     }
 
-    const auto response = future.get();
+    const auto response = request_future.future.get();
     if (response->current_state.id == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
     {
       return true;
