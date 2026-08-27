@@ -12,15 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <math.h>
 #include <memory>
 
 #include "moveit_example/moveit_example.hpp"
 
+namespace
+{
+void shiftRobotTrajectory(moveit_msgs::msg::RobotTrajectory & trajectory)
+{
+  int time_shift_ns = 0;
+  auto & points = trajectory.joint_trajectory.points;
+  for (size_t index = 1; index < points.size(); ++index)
+  {
+    points[index].time_from_start.nanosec += time_shift_ns;
+    if (points[index - 1].time_from_start == points[index].time_from_start)
+    {
+      points[index].time_from_start.nanosec += static_cast<int>(1e8);
+      time_shift_ns += static_cast<int>(1e8);
+    }
+  }
+}
+}  // namespace
+
 int main(int argc, char * argv[])
 {
-  // Setup
-  // Initialize ROS and create the Node
   rclcpp::init(argc, argv);
   auto const example_node = std::make_shared<MoveitExample>();
   rclcpp::executors::SingleThreadedExecutor executor;
@@ -28,47 +43,30 @@ int main(int argc, char * argv[])
   std::thread([&executor]() { executor.spin(); }).detach();
 
   example_node->initialize();
-
-  // Add robot platform
+  example_node->addBreakPoint();
   example_node->addRobotPlatform();
 
-  // Go to correct position for the example
-  auto init_trajectory = example_node->planToPosition(
-    std::vector<double>{0.0017, -2.096, 1.514, 0.0012, -0.9888, -0.0029});
-  if (init_trajectory != nullptr)
-  {
-    example_node->moveGroupInterface()->execute(*init_trajectory);
-  }
-
-  // Add collision object
-  example_node->addCollisionBox(
-    geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.125).y(0.15).z(0.5),
-    geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.1).y(1.0).z(0.1));
-  example_node->addBreakPoint();
-
-  auto cart_goal =
+  const auto standing_pose =
+    Eigen::Isometry3d(Eigen::Translation3d(0.1, 0, 0.8) * Eigen::Quaterniond::Identity());
+  const auto cart_goal =
+    Eigen::Isometry3d(Eigen::Translation3d(0.2, -0.15, 0.6) * Eigen::Quaterniond::Identity());
+  const auto cart_goal2 =
     Eigen::Isometry3d(Eigen::Translation3d(0.4, -0.15, 0.55) * Eigen::Quaterniond::Identity());
 
-  geometry_msgs::msg::Quaternion q;
-  q.x = 0;
-  q.y = 0;
-  q.z = 0;
-  q.w = 1;
+  std::vector<MotionSegment> motion_sequence;
+  motion_sequence.emplace_back(standing_pose, "PTP", 0.01);
+  motion_sequence.emplace_back(cart_goal, "LIN", 0.05);
+  motion_sequence.emplace_back(cart_goal2, "LIN", 0.0);
 
-  example_node->moveGroupInterface()->setPlanningTime(30.0);
-
-  example_node->setOrientationConstraint(q);
-  // Plan with collision avoidance
-  auto planned_trajectory =
-    example_node->planToPointUntilSuccess(cart_goal, "ompl", "RRTkConfigDefault");
+  auto planned_trajectory = example_node->blend(motion_sequence);
   if (planned_trajectory != nullptr)
   {
+    shiftRobotTrajectory(*planned_trajectory);
     example_node->drawTrajectory(*planned_trajectory);
     example_node->addBreakPoint();
     example_node->moveGroupInterface()->execute(*planned_trajectory);
   }
 
-  // Shutdown ROS
   rclcpp::shutdown();
   return 0;
 }

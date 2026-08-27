@@ -12,6 +12,7 @@ The `moveit_example` package demonstrates integration of the KUKA iiQKA driver w
 - Support for multiple control modes (position, impedance, torque)
 - Visualization with RViz and MoveIt 2 plugin
 - Example trajectory publisher and motion planning executors
+- Pilz PTP and LIN sequence blending
 
 **Startup:**
 ```bash
