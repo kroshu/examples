@@ -23,7 +23,8 @@ ros2 launch moveit_example moveit_planning_example.launch.py
 The `moveit_task_constructor_example` package demonstrates a depalletizing task using the MoveIt Task Constructor with KUKA LBR iisy robots.
 
 **Features:**
-- Plans and executes a pick-and-place task for a 2x2x2 pallet arrangement
+- Plans and executes a complete pick-and-place task for each object in a 2x2x2 pallet arrangement
+- Replans from the updated planning scene after each object is placed
 - Uses OMPL, joint interpolation, and Cartesian path planners
 - Visualizes the planning scene and task solutions in RViz
 

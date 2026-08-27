@@ -21,7 +21,8 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
     rviz_config_file = (
-        get_package_share_directory("kuka_resources") + "/config/view_6_axis_planning_scene.rviz"
+        get_package_share_directory("moveit_task_constructor_example")
+        + "/config/moveit_task_constructor.rviz"
     )
 
     startup_launch = IncludeLaunchDescription(

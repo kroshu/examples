@@ -18,7 +18,7 @@ target_include_directories(mtc_depalletizing_example PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(mtc_depalletizing_example PUBLIC c_std_99 cxx_std_17)
 
-install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
 install(TARGETS mtc_depalletizing_example
   DESTINATION lib/${PROJECT_NAME})
 

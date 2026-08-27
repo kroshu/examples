@@ -146,10 +146,12 @@ void MTCDepalletizingTaskNode::detachObject(const std::string & object_id)
   psi.removeCollisionObjects({object_id});
 }
 
-mtc::Task MTCDepalletizingTaskNode::createTask()
+mtc::Task MTCDepalletizingTaskNode::createTask(int i, int j, int k)
 {
   mtc::Task task;
-  task.stages()->setName("depalletizing task");
+  const auto object_index = 4 * k + 2 * j + i;
+  const auto object_id = "pallet_" + std::to_string(object_index);
+  task.stages()->setName("depalletizing " + object_id);
   task.loadRobotModel(node_);
 
   const auto & arm_group_name = "manipulator";
@@ -181,19 +183,12 @@ mtc::Task MTCDepalletizingTaskNode::createTask()
   start->setGoal(start_joint_positions);
   task.add(std::move(start));
 
-  // Loop through every item
-  for (int k = 0; k < 2; k++)
-  {
-    for (int j = 0; j < 2; j++)
-    {
-      for (int i = 0; i < 2; i++)
-      {
-        // Define Approach Stage
-        auto approach_stage = std::make_unique<mtc::stages::MoveTo>(
-          "approach_" + std::to_string(4 * k + 2 * j + i), sampling_planner);
+  // Define Approach Stage
+  auto approach_stage = std::make_unique<mtc::stages::MoveTo>(
+    "approach_" + std::to_string(object_index), sampling_planner);
         approach_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
         approach_stage->properties().set(
-          "marker_ns", "approach_" + std::to_string(4 * k + 2 * j + i));
+          "marker_ns", "approach_" + std::to_string(object_index));
         geometry_msgs::msg::PoseStamped approach_pose;
         approach_pose.header.frame_id = "world";
         approach_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
@@ -204,13 +199,13 @@ mtc::Task MTCDepalletizingTaskNode::createTask()
         approach_pose.pose.orientation.z = 0.0;
         approach_pose.pose.orientation.w = 0.0;
         approach_stage->setGoal(approach_pose);
-        task.add(std::move(approach_stage));
+  task.add(std::move(approach_stage));
 
-        // Define Pick Stage
-        auto pick_stage = std::make_unique<mtc::stages::MoveTo>(
-          "pick_" + std::to_string(4 * k + 2 * j + i), cartesian_planner);
+  // Define Pick Stage
+  auto pick_stage = std::make_unique<mtc::stages::MoveTo>(
+    "pick_" + std::to_string(object_index), cartesian_planner);
         pick_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        pick_stage->properties().set("marker_ns", "pick_" + std::to_string(4 * k + 2 * j + i));
+        pick_stage->properties().set("marker_ns", "pick_" + std::to_string(object_index));
         geometry_msgs::msg::PoseStamped pick_pose;
         pick_pose.header.frame_id = "world";
         pick_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
@@ -221,19 +216,19 @@ mtc::Task MTCDepalletizingTaskNode::createTask()
         pick_pose.pose.orientation.z = 0.0;
         pick_pose.pose.orientation.w = 0.0;
         pick_stage->setGoal(pick_pose);
-        task.add(std::move(pick_stage));
+  task.add(std::move(pick_stage));
 
-        // Attach Object Stage
-        auto attach_stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
-          "attach object_" + std::to_string(4 * k + 2 * j + i));
-        attach_stage->attachObject("pallet_" + std::to_string(4 * k + 2 * j + i), eef_frame);
-        task.add(std::move(attach_stage));
+  // Attach Object Stage
+  auto attach_stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
+    "attach object_" + std::to_string(object_index));
+  attach_stage->attachObject(object_id, eef_frame);
+  task.add(std::move(attach_stage));
 
-        // Define Lift Stage
-        auto lift_stage = std::make_unique<mtc::stages::MoveTo>(
-          "lift_" + std::to_string(4 * k + 2 * j + i), cartesian_planner);
+  // Define Lift Stage
+  auto lift_stage = std::make_unique<mtc::stages::MoveTo>(
+    "lift_" + std::to_string(object_index), cartesian_planner);
         lift_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        lift_stage->properties().set("marker_ns", "lift_" + std::to_string(4 * k + 2 * j + i));
+        lift_stage->properties().set("marker_ns", "lift_" + std::to_string(object_index));
         geometry_msgs::msg::PoseStamped lift_pose;
         lift_pose.header.frame_id = "world";
         lift_pose.pose.position.x = 0.3 + PALLET_DISTANCE * i;
@@ -244,14 +239,14 @@ mtc::Task MTCDepalletizingTaskNode::createTask()
         lift_pose.pose.orientation.z = 0.0;
         lift_pose.pose.orientation.w = 0.0;
         lift_stage->setGoal(lift_pose);
-        task.add(std::move(lift_stage));
+  task.add(std::move(lift_stage));
 
-        // Define Move Stage
-        auto move_stage = std::make_unique<mtc::stages::MoveTo>(
-          "move_" + std::to_string(4 * k + 2 * j + i), sampling_planner);
+  // Define Move Stage
+  auto move_stage = std::make_unique<mtc::stages::MoveTo>(
+    "move_" + std::to_string(object_index), sampling_planner);
         move_stage->setTimeout(10.0);
         move_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
-        move_stage->properties().set("marker_ns", "move_" + std::to_string(4 * k + 2 * j + i));
+        move_stage->properties().set("marker_ns", "move_" + std::to_string(object_index));
         geometry_msgs::msg::PoseStamped move_pose;
         move_pose.header.frame_id = "world";
         move_pose.pose.position.x = -0.3 - PALLET_DISTANCE * i;
@@ -262,40 +257,37 @@ mtc::Task MTCDepalletizingTaskNode::createTask()
         move_pose.pose.orientation.z = 0.0;
         move_pose.pose.orientation.w = 0.0;
         move_stage->setGoal(move_pose);
-        task.add(std::move(move_stage));
+  task.add(std::move(move_stage));
 
-        // Define Place Stage
-        auto place_stage = std::make_unique<mtc::stages::MoveRelative>(
-          "place_" + std::to_string(4 * k + 2 * j + i), cartesian_planner);
-        place_stage->properties().set("marker_ns", "place_" + std::to_string(4 * k + 2 * j + i));
+  // Define Place Stage
+  auto place_stage = std::make_unique<mtc::stages::MoveRelative>(
+    "place_" + std::to_string(object_index), cartesian_planner);
+        place_stage->properties().set("marker_ns", "place_" + std::to_string(object_index));
         place_stage->properties().set("link", eef_frame);
         place_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
         geometry_msgs::msg::Vector3Stamped vec_place;
         vec_place.header.frame_id = "world";
         vec_place.vector.z = -(2 - k) * PALLET_DISTANCE - 0.02;
         place_stage->setDirection(vec_place);
-        task.add(std::move(place_stage));
+  task.add(std::move(place_stage));
 
-        // Detach Object Stage
-        auto detach_stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
-          "detach object_" + std::to_string(4 * k + 2 * j + i));
-        detach_stage->detachObject("pallet_" + std::to_string(4 * k + 2 * j + i), eef_frame);
-        task.add(std::move(detach_stage));
+  // Detach Object Stage
+  auto detach_stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
+    "detach object_" + std::to_string(object_index));
+  detach_stage->detachObject(object_id, eef_frame);
+  task.add(std::move(detach_stage));
 
-        // Define Lift2 Stage
-        auto lift2_stage = std::make_unique<mtc::stages::MoveRelative>(
-          "lift2_" + std::to_string(4 * k + 2 * j + i), cartesian_planner);
-        lift2_stage->properties().set("marker_ns", "lift2_" + std::to_string(4 * k + 2 * j + i));
+  // Define Lift2 Stage
+  auto lift2_stage = std::make_unique<mtc::stages::MoveRelative>(
+    "lift2_" + std::to_string(object_index), cartesian_planner);
+        lift2_stage->properties().set("marker_ns", "lift2_" + std::to_string(object_index));
         lift2_stage->properties().set("link", eef_frame);
         lift2_stage->properties().configureInitFrom(mtc::Stage::PARENT, {"group"});
         geometry_msgs::msg::Vector3Stamped vec_lift2;
         vec_lift2.header.frame_id = "world";
         vec_lift2.vector.z = (2 - k) * PALLET_DISTANCE + 0.02;
         lift2_stage->setDirection(vec_lift2);
-        task.add(std::move(lift2_stage));
-      }
-    }
-  }
+  task.add(std::move(lift2_stage));
 
   return task;
 }
@@ -356,9 +348,18 @@ int main(int argc, char ** argv)
   if (mtc_depalletizing_task_node->waitForRobotManager())
   {
     mtc_depalletizing_task_node->setupPlanningScene();
-    mtc::Task task = mtc_depalletizing_task_node->createTask();
-    while (rclcpp::ok() && !mtc_depalletizing_task_node->doTask(task))
+    for (int k = 0; k < 2 && rclcpp::ok(); ++k)
     {
+      for (int j = 0; j < 2 && rclcpp::ok(); ++j)
+      {
+        for (int i = 0; i < 2 && rclcpp::ok(); ++i)
+        {
+          auto task = mtc_depalletizing_task_node->createTask(i, j, k);
+          while (rclcpp::ok() && !mtc_depalletizing_task_node->doTask(task))
+          {
+          }
+        }
+      }
     }
   }
 

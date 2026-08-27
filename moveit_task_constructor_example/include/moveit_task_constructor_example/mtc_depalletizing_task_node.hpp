@@ -40,7 +40,7 @@ public:
   void detachObject(const std::string & object_id);
   bool waitForRobotManager();
   void setupPlanningScene() override;
-  mtc::Task createTask() override;
+  mtc::Task createTask(int i, int j, int k) override;
   bool doTask(mtc::Task & task) override;
 
 private:

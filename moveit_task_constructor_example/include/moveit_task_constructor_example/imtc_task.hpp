@@ -27,7 +27,7 @@ public:
   virtual ~IMTCTask() = default;
 
   virtual void setupPlanningScene() = 0;
-  virtual mtc::Task createTask() = 0;
+  virtual mtc::Task createTask(int i, int j, int k) = 0;
   virtual bool doTask(mtc::Task & task) = 0;
 };
 
