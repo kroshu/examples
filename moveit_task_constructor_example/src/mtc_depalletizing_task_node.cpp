@@ -14,11 +14,11 @@
 
 #include "moveit_task_constructor_example/mtc_depalletizing_task_node.hpp"
 
-#include <lifecycle_msgs/msg/state.hpp>
-#include <lifecycle_msgs/srv/get_state.hpp>
-
 #include <chrono>
 #include <thread>
+
+#include <lifecycle_msgs/msg/state.hpp>
+#include <lifecycle_msgs/srv/get_state.hpp>
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("mtc_depalletizing_task_node");
 
