@@ -24,6 +24,7 @@ static const rclcpp::Logger LOGGER = rclcpp::get_logger("mtc_depalletizing_task_
 
 double PALLET_SIZE = 0.097;
 double PALLET_DISTANCE = 0.1;
+constexpr int kMaxTaskAttempts = 3;
 
 rclcpp::node_interfaces::NodeBaseInterface::SharedPtr
 MTCDepalletizingTaskNode::getNodeBaseInterface()
@@ -345,26 +346,39 @@ int main(int argc, char ** argv)
       executor.remove_node(mtc_depalletizing_task_node->getNodeBaseInterface());
     });
 
+  bool completed_successfully = false;
   if (mtc_depalletizing_task_node->waitForRobotManager())
   {
     mtc_depalletizing_task_node->setupPlanningScene();
-    for (int k = 0; k < 2 && rclcpp::ok(); ++k)
+    completed_successfully = true;
+    for (int k = 0; k < 2 && rclcpp::ok() && completed_successfully; ++k)
     {
-      for (int j = 0; j < 2 && rclcpp::ok(); ++j)
+      for (int j = 0; j < 2 && rclcpp::ok() && completed_successfully; ++j)
       {
-        for (int i = 0; i < 2 && rclcpp::ok(); ++i)
+        for (int i = 0; i < 2 && rclcpp::ok() && completed_successfully; ++i)
         {
-          auto task = mtc_depalletizing_task_node->createTask(i, j, k);
-          while (rclcpp::ok() && !mtc_depalletizing_task_node->doTask(task))
+          bool object_completed = false;
+          for (int attempt = 1;
+               attempt <= kMaxTaskAttempts && rclcpp::ok() && !object_completed;
+               ++attempt)
           {
+            auto task = mtc_depalletizing_task_node->createTask(i, j, k);
+            object_completed = mtc_depalletizing_task_node->doTask(task);
+          }
+          if (!object_completed)
+          {
+            RCLCPP_ERROR(
+              LOGGER, "Failed to depalletize object after %d attempts", kMaxTaskAttempts);
+            completed_successfully = false;
           }
         }
       }
     }
   }
 
+  completed_successfully = completed_successfully && rclcpp::ok();
   executor.cancel();
   spin_thread.join();
   rclcpp::shutdown();
-  return 0;
+  return completed_successfully ? 0 : 1;
 }
