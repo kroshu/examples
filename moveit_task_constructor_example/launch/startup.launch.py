@@ -16,7 +16,8 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from moveit_configs_utils import MoveItConfigsBuilder
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 
@@ -41,9 +42,17 @@ def launch_setup(context, *args, **kwargs):
     if robot_family_value == "lbr_iisy":
         robot_support_package = "kuka_lbr_iisy_support"
         moveit_config_package = "kuka_lbr_iisy_moveit_config"
+        driver_package = "kuka_iiqka_eac_driver"
     else:
         robot_support_package = f"kuka_{robot_family_value}_support"
         moveit_config_package = "kuka_kr_moveit_config"
+        driver_package = "kuka_rsi_driver"
+
+    driver_startup = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [get_package_share_directory(driver_package), "/launch/startup.launch.py"]
+        )
+    )
 
     moveit_config = (
         MoveItConfigsBuilder(moveit_config_package.removesuffix("_moveit_config"))
@@ -101,7 +110,7 @@ def launch_setup(context, *args, **kwargs):
         ],
     )
 
-    to_start = [move_group_server, mtc_demo]
+    to_start = [driver_startup, move_group_server, mtc_demo]
 
     return to_start
 

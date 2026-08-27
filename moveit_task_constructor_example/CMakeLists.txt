@@ -7,11 +7,12 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
 find_package(moveit_task_constructor_core REQUIRED)
 find_package(rclcpp REQUIRED)
 
 add_executable(mtc_depalletizing_example src/mtc_depalletizing_task_node.cpp)
-ament_target_dependencies(mtc_depalletizing_example moveit_task_constructor_core rclcpp)
+ament_target_dependencies(mtc_depalletizing_example lifecycle_msgs moveit_task_constructor_core rclcpp)
 target_include_directories(mtc_depalletizing_example PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)

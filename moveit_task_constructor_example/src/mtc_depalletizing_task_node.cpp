@@ -14,6 +14,10 @@
 
 #include "moveit_task_constructor_example/mtc_depalletizing_task_node.hpp"
 
+#include <lifecycle_msgs/msg/state.hpp>
+#include <lifecycle_msgs/srv/get_state.hpp>
+
+#include <chrono>
 #include <thread>
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("mtc_depalletizing_task_node");
@@ -30,6 +34,50 @@ MTCDepalletizingTaskNode::getNodeBaseInterface()
 MTCDepalletizingTaskNode::MTCDepalletizingTaskNode(const rclcpp::NodeOptions & options)
 : node_{std::make_shared<rclcpp::Node>("mtc_depalletizing_task_node", options)}
 {
+}
+
+bool MTCDepalletizingTaskNode::waitForRobotManager()
+{
+  using namespace std::chrono_literals;
+
+  const auto client = node_->create_client<lifecycle_msgs::srv::GetState>(
+    "robot_manager/get_state");
+  const auto request = std::make_shared<lifecycle_msgs::srv::GetState::Request>();
+
+  while (rclcpp::ok())
+  {
+    if (!client->wait_for_service(1s))
+    {
+      RCLCPP_INFO_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 5000,
+        "Waiting for robot_manager lifecycle service");
+      continue;
+    }
+
+    auto future = client->async_send_request(request).future;
+    const auto result = future.wait_for(1s);
+    if (result != std::future_status::ready)
+    {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 5000,
+        "Timed out while querying robot_manager lifecycle state");
+      continue;
+    }
+
+    const auto response = future.get();
+    if (response->current_state.id == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
+    {
+      return true;
+    }
+
+    RCLCPP_INFO_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 5000,
+      "Waiting for robot_manager to become active (current state: %s)",
+      response->current_state.label.c_str());
+    std::this_thread::sleep_for(1s);
+  }
+
+  return false;
 }
 
 void MTCDepalletizingTaskNode::setupPlanningScene()
@@ -305,11 +353,16 @@ int main(int argc, char ** argv)
       executor.remove_node(mtc_depalletizing_task_node->getNodeBaseInterface());
     });
 
-  mtc_depalletizing_task_node->setupPlanningScene();
-  mtc::Task task = mtc_depalletizing_task_node->createTask();
-  while (!mtc_depalletizing_task_node->doTask(task))
+  if (mtc_depalletizing_task_node->waitForRobotManager())
   {
+    mtc_depalletizing_task_node->setupPlanningScene();
+    mtc::Task task = mtc_depalletizing_task_node->createTask();
+    while (rclcpp::ok() && !mtc_depalletizing_task_node->doTask(task))
+    {
+    }
   }
+
+  executor.cancel();
   spin_thread.join();
   rclcpp::shutdown();
   return 0;

@@ -39,7 +39,7 @@ ros2 launch moveit_task_constructor_example startup.launch.py
 
 **Available launch arguments:**
 - `robot_model` (default: `lbr_iisy3_r760`): Robot model name
-- `robot_family` (default: `lbr_iisy`): Robot family; use an industrial family such as `agilus` with its matching model
+- `robot_family` (default: `lbr_iisy`): Robot family; use an RSI-based industrial family such as `agilus` with its matching model
 - `namespace` (default: empty): ROS 2 namespace for all nodes
 - `x`, `y`, `z` (default: `0`): Position of `base_link` relative to `world` in meters
 - `roll`, `pitch`, `yaw` (default: `0`): Orientation of `base_link` relative to `world` in radians
@@ -49,6 +49,8 @@ For example, to use a KR Agilus robot:
 ros2 launch moveit_task_constructor_example startup_with_rviz.launch.py \
     robot_family:=agilus robot_model:=kr6_r700_sixx
 ```
+
+Sunrise LBR iiwa robots are not supported by this example.
 
 ## Multi-Robot Support
 

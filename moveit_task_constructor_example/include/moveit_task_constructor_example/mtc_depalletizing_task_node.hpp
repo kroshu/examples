@@ -38,6 +38,7 @@ public:
   rclcpp::node_interfaces::NodeBaseInterface::SharedPtr getNodeBaseInterface();
   void attachObject(const std::string & object_id);
   void detachObject(const std::string & object_id);
+  bool waitForRobotManager();
   void setupPlanningScene() override;
   mtc::Task createTask() override;
   bool doTask(mtc::Task & task) override;
